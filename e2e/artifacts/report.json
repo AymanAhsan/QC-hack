@@ -1,0 +1,96 @@
+{
+  "started_at": "2026-10-09T18:04:32.389Z",
+  "checks": [
+    {
+      "name": "Deals lists today’s stacks by category",
+      "ok": true,
+      "ms": 386,
+      "detail": {
+        "meal_deals": 5
+      }
+    },
+    {
+      "name": "Arrow keys move between deal categories",
+      "ok": true,
+      "ms": 12
+    },
+    {
+      "name": "Tapping a deal opens the same stack in Scan",
+      "ok": true,
+      "ms": 1280
+    },
+    {
+      "name": "Sample cart shows items and the documented Nike stack",
+      "ok": true,
+      "ms": 1290
+    },
+    {
+      "name": "Uploaded screenshot of an unknown store is read and gets a simulated coupon",
+      "ok": true,
+      "ms": 7065,
+      "detail": {
+        "coupon": "CYCLE15 · 15% off cycling apparel and accessories · −$19.72 · AI-generated · simulated, not a verified offer · You pay · $121.72",
+        "card": "Venture X · 2x points base rate · 2.8% back · +$3.41 · 243 pts · Beats Apple Card by $0.98 on $121.72"
+      }
+    },
+    {
+      "name": "Uploaded screenshot of a known store uses its demo coupon",
+      "ok": true,
+      "ms": 4532
+    },
+    {
+      "name": "A screenshot that is not a cart falls back to the sample with a warning",
+      "ok": true,
+      "ms": 9086,
+      "detail": {
+        "warning": "That image doesn't look like a shopping cart. Showing a sample cart instead."
+      }
+    },
+    {
+      "name": "A file that is not an image is rejected with a clear message",
+      "ok": true,
+      "ms": 58
+    },
+    {
+      "name": "Manual entry validates, then stacks a typed unknown store",
+      "ok": true,
+      "ms": 3556,
+      "detail": {
+        "coupon": "JOESPIZZA15 · 15% off your next pizza order · −$4.50 · AI-generated · simulated, not a verified offer · You pay · $25.50",
+        "card": "Amex Gold · 4x points on Dining · 7.2% back · +$1.84 · 102 pts · Beats Chase Sapphire by $0.69 on $25.50"
+      }
+    },
+    {
+      "name": "Card-used picker logs the purchase (or reports the pending endpoint)",
+      "ok": true,
+      "ms": 391,
+      "detail": {
+        "outcome": "POST /api/transactions answered 501 (persistence not merged yet)"
+      }
+    },
+    {
+      "name": "No unexpected console errors",
+      "ok": true,
+      "ms": 0
+    }
+  ],
+  "screenshots": [
+    "01-deals-clothing.png",
+    "02-scan-from-deal.png",
+    "03-scan-sample-cart.png",
+    "04-scan-upload-unknown-store.png",
+    "05-scan-upload-known-store.png",
+    "06-scan-not-a-cart.png",
+    "07-scan-manual-unknown-store.png",
+    "08-scan-log-purchase.png"
+  ],
+  "backend": {
+    "status": "ok",
+    "db_mode": "not_configured",
+    "gemini_configured": true,
+    "version": "0.1.0"
+  },
+  "browser": "chromium 155.0.8059.39",
+  "finished_at": "2026-10-09T18:05:01.067Z",
+  "passed": true
+}

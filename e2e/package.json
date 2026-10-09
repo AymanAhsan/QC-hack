@@ -1,0 +1,11 @@
+{
+  "name": "card-optimizer-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scan-deals": "node scan-deals.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

@@ -2,11 +2,18 @@
 
 ## Project Structure & Module Organization
 
-This repository currently contains specifications for the Credit Card Optimizer demo. Read `PROJECT.md` for product behavior and `PLANNING.md` for implementation details. The planned layout is `backend/` for FastAPI, mock data, rewards, Gemini, and database access; `frontend/src/` for React screens, components, and API helpers; and `frontend/public/` for PWA assets. These directories do not exist yet. Put tests beside the code or in `tests/` directories.
+Read `PROJECT.md` for product behavior, `PLANNING.md` for implementation details, and `docs/API.md` for the API contract. `backend/` holds FastAPI (`main.py` registers one router per feature in `backend/routers/`), mock data (`data.py`), the rewards engine (`engine.py`), contract models (`schemas.py`), Gemini (`gemini.py`), and database access (`db.py`). `frontend/src/` holds the shell (`App.tsx`, `navigation.tsx`), the typed client (`api.ts`, `types.ts`), shared components, and one directory per screen under `screens/`. Backend tests live in `backend/tests/`.
 
 ## Build, Test, and Development Commands
 
-There is no runnable app, dependency manifest, or test command yet. Use `rg --files` to list project files and `git status --short` to review local changes. When adding Vite and FastAPI, document the configured install, development, build, and test commands here.
+- Backend install: `cd backend && python -m venv .venv && .venv/Scripts/activate && pip install -r requirements.txt`
+- Backend dev server: `cd backend && uvicorn main:app --reload --port 8000`
+- Backend tests: `cd backend && python -m pytest`
+- Frontend install: `cd frontend && npm install`
+- Frontend dev server (LAN-visible, proxies `/api`): `cd frontend && npm run dev`
+- Frontend typecheck / build: `npm run typecheck`, `npm run build`
+
+See `README.md` for environment variables and phone testing.
 
 ## Coding Style & Naming Conventions
 
@@ -14,7 +21,7 @@ Follow the planned split: keep rewards calculations as pure functions in `backen
 
 ## Testing Guidelines
 
-No test framework or coverage threshold has been selected. Prioritize deterministic engine tests for network acceptance, reward rates, coupon selection, post-coupon rewards, and missed cash back. Check the $100 Nike stack and Costco's Visa-only ranking from `PLANNING.md`. Add API and screen tests for behavior pure-function tests cannot cover.
+Backend tests use pytest (`backend/tests/`). Prioritize deterministic engine tests for network acceptance, reward rates, coupon selection, post-coupon rewards, and missed cash back. Check the $100 Nike stack and Costco's Visa-only ranking from `PLANNING.md`. Add API and screen tests for behavior pure-function tests cannot cover.
 
 ## Commit & Pull Request Guidelines
 
