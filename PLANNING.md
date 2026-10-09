@@ -4,14 +4,16 @@ Implementation plan for the Credit Card Optimizer. See [PROJECT.md](PROJECT.md) 
 
 ---
 
-## 1. Decisions to make before starting
+## 1. Decisions
 
-| # | Decision | Recommendation | Why |
+All four are settled.
+
+| # | Decision | Outcome | Why |
 |---|---|---|---|
-| 1 | Offline fallbacks for Gemini and the database | Yes: sample cart when Gemini fails, local SQLite when no database URL is set | A live demo should not die on venue Wi-Fi. Cost is a second small database code path. |
-| 2 | Stacking maths | Calculate rewards on the post-coupon price | Defensible if a judge checks the numbers. Slightly lower than simply adding the percentages. |
-| 3 | "This month" window for missed cash back | Trailing 30 days | A calendar month looks empty if the demo falls early in the month. |
-| 4 | Project folder | Needs a location from you | The current workspace is temporary. |
+| 1 | Offline fallbacks for Gemini and the database | **Yes.** Sample cart when Gemini fails, local SQLite when no database URL is set | A live demo should not die on venue Wi-Fi. Cost is a second small database code path. |
+| 2 | Stacking maths | **Rewards on the post-coupon price** | Defensible if a judge checks the numbers. Slightly lower than simply adding the percentages. |
+| 3 | "This month" window for missed cash back | **Trailing 30 days** | A calendar month looks empty if the demo falls early in the month. |
+| 4 | Project folder | **`C:\Users\Admin\QC-hack`** (this repository) | Code goes in `backend/` and `frontend/` at the repo root. |
 
 Needed from you: a Gemini API key and a Tiger Data connection string. Phases 1 and 2 can be built without either.
 
@@ -256,7 +258,7 @@ Releasing before 1,000 ms cancels back to `located`.
 | Risk | Mitigation |
 |---|---|
 | Gemini is slow or rate limited during the demo | Sample-cart fallback; hardcoded coupons for every demo store |
-| Database unreachable at the venue | SQLite fallback (if decision 1 is yes) |
+| Database unreachable at the venue | SQLite fallback (decision 1) |
 | `navigator.vibrate` does nothing on iPhone Safari | Demo haptics on Android; the chime and animation still land on iPhone |
 | Browsers block audio until the user interacts | The chime plays inside the press-and-hold gesture, which counts as interaction |
 | Card stack does not fit on small phones | Size the stack from viewport height; let the "why" drawer scroll |
