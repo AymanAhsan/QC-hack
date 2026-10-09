@@ -18,3 +18,13 @@ Object.defineProperty(window, 'matchMedia', {
     removeListener: () => {},
   })),
 })
+
+// jsdom lacks these browser APIs used by the Wallet deck and hold button.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObserver
+Element.prototype.setPointerCapture ??= () => {}
+Element.prototype.releasePointerCapture ??= () => {}

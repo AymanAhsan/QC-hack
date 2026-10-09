@@ -1,7 +1,7 @@
 // Wallet: the in-store flow. Owner: Yousef.
 //
 //   idle ──(pick store)──► located ──(press & hold)──► scan ──600 ms──► read
-//                            ▲   ▲                       │ release        │ 1,000 ms
+//                            ▲   ▲                       │ release        │ 1,000 ms after press
 //                            │   └───────────────────────┘ cancels        ▼
 //                            └──(done)── receipt ◄──900 ms── success (chime, vibrate, POST)
 //
@@ -13,7 +13,7 @@ import { MotionConfig, motion } from 'motion/react'
 import { api, newIdempotencyKey } from '../../api'
 import { useNav } from '../../navigation'
 import type { Card, Location, RecommendResponse } from '../../types'
-import { formatCents } from '../../lib/format'
+import { formatCents, parseDollarsToCents } from '../../lib/format'
 import { DemoBadge, ErrorNotice, Loading, ScreenHeader } from '../../components/ui'
 import { WalletCard } from './WalletCard'
 import { WhyDrawer } from './WhyDrawer'
@@ -21,13 +21,10 @@ import { PayButton } from './PayButton'
 import { Receipt, type ReceiptData } from './Receipt'
 import { StorePicker } from './StorePicker'
 import { playChime, unlockAudio, vibrateSuccess, vibrateTick } from './feedback'
+import { HANDSHAKE_MS, READ_DURATION_MS, RECEIPT_DELAY_MS } from './timing'
 
 export type PayPhase = 'idle' | 'located' | 'scan' | 'read' | 'success' | 'receipt'
 
-// Beat timings (PROJECT.md, Interaction 3)
-const HANDSHAKE_MS = 600
-const READ_MS = 1000
-const RECEIPT_DELAY_MS = 900
 
 // Deck geometry. Card size follows the available width, capped at 340 px.
 const MAX_CARD_W = 340
@@ -62,6 +59,7 @@ export function WalletScreen() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [phase, setPhaseState] = useState<PayPhase>('idle')
   const [receipt, setReceipt] = useState<ReceiptData | null>(null)
+  const [amountText, setAmountText] = useState('')
 
   // Timer callbacks read the live phase from here, not from a stale closure.
   const phaseRef = useRef<PayPhase>('idle')
@@ -108,7 +106,7 @@ export function WalletScreen() {
 
   // ── Location ──────────────────────────────────────────────────────
 
-  const arriveAt = (loc: Location) => {
+  const arriveAt = (loc: Location, amountCents?: number) => {
     setPickerOpen(false)
     clearTimers()
     recAbort.current?.abort()
@@ -116,9 +114,10 @@ export function WalletScreen() {
     recAbort.current = ctrl
     setArriving(loc)
     setRecError(null)
-    api.recommend(loc.id, undefined, ctrl.signal).then(
+    api.recommend(loc.id, amountCents, ctrl.signal).then(
       (r) => {
         setRec(r)
+        setAmountText((r.amount_cents / 100).toFixed(2))
         setReceipt(null)
         setPhase('located')
         setArriving(null)
@@ -129,6 +128,19 @@ export function WalletScreen() {
         setArriving(null)
       },
     )
+  }
+
+  // Mock purchase amount: re-rank the wallet for the typed checkout total.
+  const commitAmount = () => {
+    if (!rec) return
+    const cents = parseDollarsToCents(amountText)
+    if (cents === null || cents > 10_000_000) {
+      setAmountText((rec.amount_cents / 100).toFixed(2))
+      return
+    }
+    if (cents === rec.amount_cents) return
+    const loc = locations.find((l) => l.id === rec.merchant.id)
+    if (loc) arriveAt(loc, cents)
   }
 
   const leaveStore = () => {
@@ -195,7 +207,7 @@ export function WalletScreen() {
         purchase.current = { key: newIdempotencyKey(), rec: r }
         void save(purchase.current.key, r)
         later(() => phaseRef.current === 'success' && setPhase('receipt'), RECEIPT_DELAY_MS)
-      }, READ_MS)
+      }, READ_DURATION_MS)
     }, HANDSHAKE_MS)
   }
 
@@ -274,9 +286,22 @@ export function WalletScreen() {
             <span aria-hidden="true" className="text-[10px] opacity-60">▾</span>
           </button>
           {located && (
-            <span className="text-[13px] text-white/50">
-              Checkout <strong className="font-semibold text-white">{formatCents(rec.amount_cents)}</strong>
-            </span>
+            <label className="inline-flex items-center gap-1.5 text-[13px] text-white/50">
+              Checkout
+              <span className="inline-flex items-center rounded-lg bg-white/[0.08] px-2 py-1 focus-within:ring-1 focus-within:ring-sky-400">
+                <span aria-hidden="true" className="font-semibold text-white">$</span>
+                <input
+                  aria-label={`Purchase amount in dollars (currently ${formatCents(rec.amount_cents)})`}
+                  inputMode="decimal"
+                  value={amountText}
+                  disabled={busy || phase === 'receipt' || arriving !== null}
+                  onChange={(e) => setAmountText(e.target.value)}
+                  onBlur={commitAmount}
+                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                  className="w-[4.5rem] bg-transparent font-semibold text-white outline-none disabled:opacity-60"
+                />
+              </span>
+            </label>
           )}
         </div>
 

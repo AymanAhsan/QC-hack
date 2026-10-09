@@ -1,7 +1,7 @@
 // Sound and haptics for the simulated tap-to-pay.
 //
 // Browsers only allow audio after a user gesture, and the chime fires from a
-// timer 1.6 s after the press. So unlockAudio() runs inside pointerdown, and
+// timer 1 s after the press. So unlockAudio() runs inside pointerdown, and
 // playChime() reuses that already-running AudioContext.
 // navigator.vibrate works on Android Chrome; iPhone Safari ignores it.
 
