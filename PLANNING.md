@@ -56,6 +56,12 @@ frontend/
 
 Each card has: `id`, `name`, `network`, `last4`, `cpp` (cents per point), `base` multiplier, `rates` by category, `merchant_rates` for store-specific bonuses, and gradient and glow colours.
 
+Saved card instances also have `user_id` and `type` (one of the six card slugs
+below). Only the type and four-digit suffix are client inputs; reward settings
+and the `image` URL are derived from the mock catalog. Per-user CRUD persists in
+SQLite or Postgres. The Wallet screen overlays the suffix at the bottom left of
+the card artwork. See `docs/API.md` for the endpoints and demo user selector.
+
 | Card | Network | Value per point | Bonus rates | Base |
 |---|---|---|---|---|
 | Amex Gold | Amex | 1.8¢ | 4x dining, 4x grocery, 3x airfare | 1x |

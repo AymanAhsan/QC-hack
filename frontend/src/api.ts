@@ -5,6 +5,9 @@
 // codes "network_error" and "timeout".
 
 import type {
+  Card,
+  CardCreate,
+  CardUpdate,
   CartParseResponse,
   DealFeed,
   DealsResponse,
@@ -20,6 +23,10 @@ import type {
 } from './types'
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+
+export function activeUserId(): string {
+  return localStorage.getItem('wallet-user-id') ?? 'demo'
+}
 
 const DEFAULT_TIMEOUT_MS = 15_000
 const UPLOAD_TIMEOUT_MS = 45_000
@@ -49,7 +56,9 @@ async function request<T>(path: string, init: RequestInit = {}, timeoutMs = DEFA
   init.signal?.addEventListener('abort', onAbort)
   let res: Response
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, { ...init, signal: controller.signal })
+    const headers = new Headers(init.headers)
+    headers.set('X-User-ID', activeUserId())
+    res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers, signal: controller.signal })
   } catch (err) {
     if (init.signal?.aborted) throw err
     if (controller.signal.aborted) throw new ApiError(0, 'timeout', 'The server took too long to respond.')
@@ -88,6 +97,21 @@ export function newIdempotencyKey(): string {
 }
 
 export const api = {
+  cards: (userId: string, signal?: AbortSignal) =>
+    request<WalletResponse>(`/api/users/${encodeURIComponent(userId)}/cards`, { signal }),
+
+  card: (userId: string, cardId: string, signal?: AbortSignal) =>
+    request<Card>(`/api/users/${encodeURIComponent(userId)}/cards/${encodeURIComponent(cardId)}`, { signal }),
+
+  createCard: (userId: string, body: CardCreate) =>
+    request<Card>(`/api/users/${encodeURIComponent(userId)}/cards`, json('POST', body)),
+
+  updateCard: (userId: string, cardId: string, body: CardUpdate) =>
+    request<Card>(`/api/users/${encodeURIComponent(userId)}/cards/${encodeURIComponent(cardId)}`, json('PATCH', body)),
+
+  deleteCard: (userId: string, cardId: string) =>
+    request<void>(`/api/users/${encodeURIComponent(userId)}/cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' }),
+
   health: (signal?: AbortSignal) => request<HealthResponse>('/api/health', { signal }),
 
   wallet: (signal?: AbortSignal) => request<WalletResponse>('/api/wallet', { signal }),

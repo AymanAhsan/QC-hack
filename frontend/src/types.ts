@@ -10,6 +10,14 @@ export type CouponKind = 'percent' | 'fixed' | 'shipping'
 export type CouponSource = 'demo_catalog' | 'ai_simulated' | 'simulated_fallback'
 export type Channel = 'store' | 'online'
 export type DealFeed = 'meals' | 'clothing' | 'travel'
+export type CardType = 'amex-gold' | 'chase-sapphire' | 'chase-freedom' | 'venture-x' | 'apple-card' | 'everyday-debit'
+
+export interface CardCreate {
+  type: CardType
+  last4: string
+}
+
+export type CardUpdate = Partial<CardCreate>
 
 export interface ApiErrorBody {
   code: string
@@ -21,6 +29,9 @@ export interface ApiErrorBody {
 
 export interface Card {
   id: string
+  user_id: string
+  type: CardType
+  image: string
   name: string
   issuer: string
   network: Network
@@ -38,7 +49,7 @@ export interface Card {
 
 export interface WalletResponse {
   cards: Card[]
-  default_debit_card_id: string
+  default_debit_card_id: string | null
   is_demo_data: true
 }
 

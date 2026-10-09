@@ -168,7 +168,7 @@ Open Missed tab ► live counter of money lost ► daily chart ► per-purchase 
 
 | Thing | How it is handled |
 |---|---|
-| Cards | A fixed mock wallet with realistic multipliers, point valuations, and networks |
+| Cards | Persistent per-user wallets; choose among six mock card types with realistic multipliers, point valuations, and networks |
 | Stores | A hardcoded dictionary of popular merchants (Nike, Delta, UberEats, Whole Foods, and so on) with category, MCC code, and accepted networks |
 | Locations | Mock store locations the user picks to simulate "arriving" somewhere |
 | Coupons | Hardcoded realistic promo codes per merchant (`WELCOME10`, `SAVE15`, `FREESHIP`) |
