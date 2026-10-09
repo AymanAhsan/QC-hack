@@ -60,6 +60,12 @@ class Card:
     glow: str = "#ffffff"
     text_color: str = "#ffffff"
     is_default_debit: bool = False
+    type: str = ""
+    user_id: str = "demo"
+
+    def __post_init__(self):
+        if not self.type:
+            object.__setattr__(self, "type", self.id)
 
 
 @dataclass(frozen=True)

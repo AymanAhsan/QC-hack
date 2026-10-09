@@ -8,17 +8,19 @@ labeled sample cart with a `warning` saying why.
 
 import logging
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import Depends, APIRouter, File, Form, UploadFile
 
 import gemini
 from config import settings
-from data import WALLET
+from data import Card
 from engine import triple_stack
 from errors import ApiError
 from gemini import CartData, CartLine, GeminiError
 from schemas import CartItem, CartParseResponse, ParsedCart
 from serializers import stack_out
 from services import resolve_merchant
+
+from wallet_service import current_cards
 
 router = APIRouter(prefix="/api", tags=["cart"])
 log = logging.getLogger("uvicorn.error")
@@ -48,9 +50,9 @@ def _image_type(data: bytes) -> str | None:
     return None
 
 
-async def _respond(cart: CartData, warning: str | None, is_sample: bool) -> CartParseResponse:
+async def _respond(cart: CartData, warning: str | None, is_sample: bool, cards: tuple[Card, ...]) -> CartParseResponse:
     merchant, coupons = await resolve_merchant(None, cart.merchant_name)
-    result = triple_stack(WALLET, merchant, cart.subtotal_cents, cart.shipping_cents, coupons)
+    result = triple_stack(cards, merchant, cart.subtotal_cents, cart.shipping_cents, coupons)
     return CartParseResponse(
         source="sample" if is_sample else "gemini",
         is_sample=is_sample,
@@ -69,11 +71,12 @@ async def _respond(cart: CartData, warning: str | None, is_sample: bool) -> Cart
 
 @router.post("/cart/parse", response_model=CartParseResponse)
 async def parse_cart(
+    cards: tuple[Card, ...] = Depends(current_cards),
     file: UploadFile | None = File(default=None),
     use_sample: bool = Form(default=False),
 ) -> CartParseResponse:
     if use_sample:
-        return await _respond(SAMPLE_CART, warning=None, is_sample=True)
+        return await _respond(SAMPLE_CART, warning=None, is_sample=True, cards=cards)
     if file is None:
         raise ApiError(
             422,
@@ -92,5 +95,5 @@ async def parse_cart(
         cart = await gemini.parse_cart_image(data, mime_type)
     except GeminiError as exc:
         log.warning("Cart parse fell back to the sample cart: %s", exc.__cause__ or exc)
-        return await _respond(SAMPLE_CART, warning=f"{exc} Showing a sample cart instead.", is_sample=True)
-    return await _respond(cart, warning=None, is_sample=False)
+        return await _respond(SAMPLE_CART, warning=f"{exc} Showing a sample cart instead.", is_sample=True, cards=cards)
+    return await _respond(cart, warning=None, is_sample=False, cards=cards)

@@ -2,12 +2,14 @@
 
 from typing import Literal
 
-from fastapi import APIRouter, Query
+from fastapi import Depends, APIRouter, Query
 
-from data import DEAL_FEEDS, MERCHANTS, WALLET
+from data import Card, DEAL_FEEDS, MERCHANTS
 from engine import round_pct, triple_stack
 from schemas import DealCategoryOut, DealOut, DealsResponse
 from serializers import coupon_check_out, merchant_out
+
+from wallet_service import current_cards
 
 router = APIRouter(prefix="/api", tags=["deals"])
 
@@ -18,14 +20,14 @@ def _headline(name: str, coupon_code: str | None, card_name: str | None, pct: fl
 
 
 @router.get("/deals", response_model=DealsResponse)
-def deals(category: Literal["meals", "clothing", "travel"] | None = Query(default=None)) -> DealsResponse:
+def deals(cards: tuple[Card, ...] = Depends(current_cards), category: Literal["meals", "clothing", "travel"] | None = Query(default=None)) -> DealsResponse:
     categories = []
     for feed_id, meta in DEAL_FEEDS.items():
         if category and feed_id != category:
             continue
         feed = []
         for merchant in (m for m in MERCHANTS if m.deal_feed == feed_id):
-            stack = triple_stack(WALLET, merchant, merchant.typical_cents)
+            stack = triple_stack(cards, merchant, merchant.typical_cents)
             winner = stack.winner
             pct = float(stack.total_value_pct)
             coupon_code = stack.coupon.coupon.code if stack.coupon else None

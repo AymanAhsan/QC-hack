@@ -29,6 +29,7 @@ from threading import RLock
 from typing import Iterable
 
 from config import settings
+from card_store import CardStore
 from data import CATEGORY_LABELS
 from persistence_models import COLUMNS, DatabaseUnavailable, IdempotencyConflict, Transaction, utc_time
 
@@ -71,7 +72,7 @@ def _check_retry(existing: Transaction, candidate: Transaction) -> tuple[Transac
 # --------------------------------------------------------------------------- SQLite
 
 
-class SQLiteStore:
+class SQLiteStore(CardStore):
     def __init__(self, path: str | Path):
         self.path = str(path)
         if self.path == ":memory:":
@@ -96,6 +97,8 @@ class SQLiteStore:
                 connection.execute("ALTER TABLE transactions RENAME TO transactions_v1_legacy")
                 connection.execute("DROP INDEX IF EXISTS transactions_ts_idx")
             connection.executescript((MIGRATIONS / "002_transactions.sqlite.sql").read_text())
+            connection.execute("BEGIN IMMEDIATE")
+            self.initialize_cards(connection)
 
     def get_by_key(self, key: str) -> Transaction | None:
         with self.connection() as connection:
@@ -164,7 +167,9 @@ class SQLiteStore:
 # --------------------------------------------------------------------------- Postgres / Tiger Data
 
 
-class PostgresStore:
+class PostgresStore(CardStore):
+    placeholder = "%s"
+
     def __init__(self, database_url: str):
         import psycopg  # Imported only when configured.
 
@@ -197,6 +202,7 @@ class PostgresStore:
                     connection.execute(f"ALTER INDEX IF EXISTS {table}_pkey RENAME TO {legacy}_pkey")
                     connection.execute(f"ALTER INDEX IF EXISTS {table}_ts_idx RENAME TO {legacy}_ts_idx")
             connection.execute((MIGRATIONS / "002_transactions.postgres.sql").read_text())
+            self.initialize_cards(connection)
             self.timescale = bool(
                 connection.execute("SELECT 1 FROM pg_extension WHERE extname = 'timescaledb'").fetchone()
             )
@@ -331,6 +337,21 @@ class Database:
 
     def get_by_key(self, key: str) -> Transaction | None:
         return self._run(self.store.get_by_key, key)
+
+    def list_cards(self, user_id: str):
+        return self._run(self.store.list_cards, user_id)
+
+    def get_card(self, user_id: str, card_id: str):
+        return self._run(self.store.get_card, user_id, card_id)
+
+    def create_card(self, user_id: str, card_id: str, card_type: str, last4: str):
+        return self._run(self.store.create_card, user_id, card_id, card_type, last4)
+
+    def update_card(self, user_id: str, card_id: str, card_type: str | None, last4: str | None):
+        return self._run(self.store.update_card, user_id, card_id, card_type, last4)
+
+    def delete_card(self, user_id: str, card_id: str):
+        return self._run(self.store.delete_card, user_id, card_id)
 
     def save(self, transaction: Transaction) -> tuple[Transaction, bool]:
         """Insert once per idempotency key. Returns (stored transaction, duplicate)."""

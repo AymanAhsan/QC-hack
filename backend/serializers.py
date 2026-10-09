@@ -16,6 +16,9 @@ COUPON_LABELS = {
 def card_out(card: Card) -> s.CardOut:
     return s.CardOut(
         id=card.id,
+        user_id=card.user_id,
+        type=card.type,
+        image=f"/cards/{card.type}.svg",
         name=card.name,
         issuer=card.issuer,
         network=card.network,

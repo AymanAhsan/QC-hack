@@ -14,7 +14,7 @@ from uuid import uuid4
 
 from starlette.concurrency import run_in_threadpool
 
-from data import WALLET, Coupon, Merchant
+from data import WALLET, Card, Coupon, Merchant
 from db import Database
 from engine import evaluate_purchase
 from persistence_models import IdempotencyConflict, Transaction
@@ -37,8 +37,9 @@ def build_transaction(
     *,
     ts: datetime | None = None,
     transaction_id: str | None = None,
+    cards: Sequence[Card] = WALLET,
 ) -> Transaction:
-    p = evaluate_purchase(WALLET, merchant, body.subtotal_cents, body.card_used_id, body.coupon_code, body.shipping_cents, coupons)
+    p = evaluate_purchase(cards, merchant, body.subtotal_cents, body.card_used_id, body.coupon_code, body.shipping_cents, coupons)
     return Transaction(
         id=transaction_id or str(uuid4()),
         ts=ts or datetime.now(timezone.utc),
@@ -63,13 +64,18 @@ def build_transaction(
     )
 
 
-async def record_purchase(database: Database, body: TransactionCreate, *, now: datetime | None = None) -> tuple[Transaction, bool]:
+async def record_purchase(database: Database, body: TransactionCreate, *, now: datetime | None = None, user_id: str = "demo") -> tuple[Transaction, bool]:
     """Persist one purchase. A retried idempotency key returns the stored record without re-evaluating it."""
+    if user_id != "demo":
+        # Scope retry keys to the owner without changing transaction history schema.
+        key = hashlib.sha256(f"{user_id}:{body.idempotency_key}".encode()).hexdigest()
+        body = body.model_copy(update={"idempotency_key": key})
     existing = await run_in_threadpool(database.get_by_key, body.idempotency_key)
     if existing is not None:
         if existing.request_hash != purchase_fingerprint(body):
             raise IdempotencyConflict("This idempotency key was already used for a different purchase.")
         return existing, True
     merchant, coupons = await resolve_merchant(body.merchant_id, body.merchant_name)
-    transaction = build_transaction(body, merchant, coupons, ts=now)
+    cards = await run_in_threadpool(database.list_cards, user_id)
+    transaction = build_transaction(body, merchant, coupons, ts=now, cards=cards)
     return await run_in_threadpool(database.save, transaction)
