@@ -52,6 +52,7 @@ Every non-2xx response:
 | 413 | `payload_too_large` | Upload over `MAX_UPLOAD_BYTES` (5 MB default) |
 | 415 | `unsupported_media_type` | Upload is not PNG, JPEG, or WEBP |
 | 422 | `validation_error` | Bad query/body; `details.errors` lists fields |
+| 409 | `idempotency_conflict` | An `idempotency_key` was reused for a different purchase |
 | 422 | `merchant_required`, `coupon_not_eligible`, `invalid_amount` | Business-rule failures |
 | 501 | `not_implemented` | Endpoint registered but its workstream has not landed |
 | 503 | `database_unavailable` | Write could not be persisted (never silently switched to another DB) |
@@ -72,7 +73,7 @@ The frontend client (`frontend/src/api.ts`) throws `ApiError` with `status`, `co
 { "status": "ok", "db_mode": "sqlite", "gemini_configured": false, "version": "0.1.0" }
 ```
 
-`db_mode`: `timescale` | `postgres` | `sqlite` | `not_configured`. Shown in the dev badge.
+`db_mode`: `timescale` | `postgres` | `sqlite` | `sqlite-fallback` (Tiger Data unreachable at startup and `ALLOW_SQLITE_FALLBACK=true`) | `not_initialized`. Shown in the dev badge. See [AYMAN.md](AYMAN.md) for how the database is chosen.
 
 ## GET /api/wallet
 
@@ -325,5 +326,6 @@ Query: `days` (default 30, 1–365), `limit` for `recent` (default 50, 1–200).
 | `engine.py` | Omar | `rank_cards`, `triple_stack`, `evaluate_purchase`, `missed_rewards`, `EngineError(code, message)` |
 | `services.py` | Omar | `await resolve_merchant(merchant_id, merchant_name) -> (Merchant, coupons)` |
 | `serializers.py` | Omar | `stack_out`, `merchant_out`, `evaluation_out`, ... |
-| `db.py` | Ayman | `init()` called at startup (connect, migrate, seed idempotently); `mode() -> str` |
+| `db.py` | Ayman | `init()` at startup (connect, migrate, seed idempotently); `mode() -> str`; `get_db()` FastAPI dependency |
+| `transaction_service.py` | Ayman | `await record_purchase(db, TransactionCreate) -> (Transaction, duplicate)` |
 | `gemini.py` | Nazeef | `await generate_coupon(name) -> SimulatedCoupon` (never raises, cached); `await parse_cart_image(bytes, mime) -> CartData` (raises `GeminiError`) |
