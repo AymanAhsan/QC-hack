@@ -257,7 +257,7 @@ class _CouponReply(BaseModel):
 
 
 async def _ai_coupon(store_name: str) -> SimulatedCoupon:
-    text = await _generate_json(f"{_COUPON_PROMPT}{store_name!r}", _COUPON_SCHEMA, _COUPON_TIMEOUT_S, temperature=0.4)
+    text = await _generate_json(f"{_COUPON_PROMPT}{store_name!r}", _COUPON_SCHEMA, _COUPON_TIMEOUT_S, temperature=0)
     try:
         reply = _CouponReply.model_validate_json(text)
     except ValidationError as exc:
