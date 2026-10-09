@@ -1,63 +1,147 @@
-// Scan screen slot. Owner: Nazeef — replace this stub with the full Scan experience.
-// It demonstrates the contract: consume nav.scanIntent (from Deals) and POST /api/stack.
+// Scan: read a cart screenshot, a typed store, or a deal handed over from Deals;
+// show the coupon + card + total stack; log which card was actually used.
+// Owner: Nazeef.
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { MotionConfig } from 'motion/react'
 import { api } from '../../api'
 import { useNav } from '../../navigation'
-import type { StackResponse } from '../../types'
-import { formatCents, formatPct, parseDollarsToCents } from '../../lib/format'
-import { DemoBadge, ErrorNotice, ScreenHeader } from '../../components/ui'
+import type { Card, CartParseResponse, StackRequest, StackResponse } from '../../types'
+import { DemoBadge, ErrorNotice, Loading, ScreenHeader } from '../../components/ui'
+import { CartInput } from './CartInput'
+import { CardUsedPicker } from './CardUsedPicker'
+import { Reveal, StackResult } from './StackResult'
+
+type ScanRequest = { kind: 'upload'; file: File } | { kind: 'sample' } | { kind: 'stack'; body: StackRequest }
+
+interface Result {
+  id: number
+  stack: StackResponse
+  parse: CartParseResponse | null
+}
+
+const LOADING_LABEL: Record<ScanRequest['kind'], string> = {
+  upload: 'Reading your cart with Gemini…',
+  sample: 'Loading the sample cart…',
+  stack: 'Finding the best coupon and card…',
+}
+
+// Deals always sends a subtotal; this only covers an openScan() without one.
+const DEFAULT_SUBTOTAL_CENTS = 10000
 
 export function ScanScreen() {
   const { scanIntent, clearScanIntent } = useNav()
-  const [store, setStore] = useState('')
-  const [amount, setAmount] = useState('')
-  const [stack, setStack] = useState<StackResponse | null>(null)
-  const [error, setError] = useState<unknown>(null)
+  const [pending, setPending] = useState<ScanRequest | null>(null)
+  const [result, setResult] = useState<Result | null>(null)
+  const [failure, setFailure] = useState<{ error: unknown; request: ScanRequest } | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [cards, setCards] = useState<Card[]>([])
+  const inflight = useRef<AbortController | null>(null)
 
-  async function run(req: { merchant_id?: string; merchant_name?: string; subtotal_cents: number }) {
-    setError(null)
+  const run = useCallback(async (request: ScanRequest) => {
+    inflight.current?.abort()
+    const ctrl = new AbortController()
+    inflight.current = ctrl
+    setPending(request)
+    setFailure(null)
+    setResult(null)
     try {
-      setStack(await api.stack(req))
-    } catch (e) {
-      setError(e)
+      if (request.kind === 'stack') {
+        const stack = await api.stack(request.body, ctrl.signal)
+        setResult({ id: Date.now(), stack, parse: null })
+      } else {
+        const parse = await api.parseCart(request.kind === 'upload' ? { file: request.file } : { useSample: true }, ctrl.signal)
+        setResult({ id: Date.now(), stack: parse.stack, parse })
+      }
+    } catch (error) {
+      if (!ctrl.signal.aborted) setFailure({ error, request })
+    } finally {
+      if (inflight.current === ctrl) setPending(null)
     }
-  }
+  }, [])
+
+  useEffect(() => () => inflight.current?.abort(), [])
+
+  // Card colours for the swatches only; every number comes from the stack itself.
+  useEffect(() => {
+    const ctrl = new AbortController()
+    api.wallet(ctrl.signal).then((w) => setCards(w.cards), () => {})
+    return () => ctrl.abort()
+  }, [])
 
   useEffect(() => {
     if (!scanIntent) return
-    const subtotal = scanIntent.subtotalCents ?? 10000
-    setStore(scanIntent.merchantName ?? scanIntent.merchantId ?? '')
-    setAmount((subtotal / 100).toFixed(2))
-    void run({ merchant_id: scanIntent.merchantId, merchant_name: scanIntent.merchantName, subtotal_cents: subtotal })
+    const { merchantId, merchantName, subtotalCents } = scanIntent
     clearScanIntent()
-  }, [scanIntent, clearScanIntent])
+    void run({
+      kind: 'stack',
+      body: { merchant_id: merchantId, merchant_name: merchantName, subtotal_cents: subtotalCents ?? DEFAULT_SUBTOTAL_CENTS },
+    })
+  }, [scanIntent, clearScanIntent, run])
 
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    const cents = parseDollarsToCents(amount)
-    if (!store.trim() || cents === null) return setError(new Error('Enter a store and an amount'))
-    void run({ merchant_name: store.trim(), subtotal_cents: cents })
+  useEffect(() => {
+    if (!preview) return
+    return () => URL.revokeObjectURL(preview)
+  }, [preview])
+
+  function upload(file: File) {
+    setPreview(URL.createObjectURL(file))
+    void run({ kind: 'upload', file })
   }
 
+  function startOver() {
+    inflight.current?.abort()
+    setPending(null)
+    setResult(null)
+    setFailure(null)
+    setPreview(null)
+  }
+
+  const showInput = !pending && !result
+
   return (
-    <section>
-      <ScreenHeader title="Scan" subtitle={<DemoBadge>Coupons are simulated</DemoBadge>} />
-      <form onSubmit={submit} className="space-y-2">
-        <input aria-label="Store" value={store} onChange={(e) => setStore(e.target.value)} placeholder="Store (e.g. Nike)" className="w-full rounded-xl bg-white/10 px-3 py-2" />
-        <input aria-label="Subtotal in dollars" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="Subtotal ($)" className="w-full rounded-xl bg-white/10 px-3 py-2" />
-        <button type="submit" className="w-full rounded-xl bg-white py-2 font-semibold text-black">Stack it</button>
-      </form>
-      {error ? <div className="mt-3"><ErrorNotice error={error} /></div> : null}
-      {stack && (
-        <dl className="mt-4 space-y-1 rounded-2xl bg-white/5 p-4 text-sm">
-          <div className="flex justify-between"><dt>Store</dt><dd>{stack.merchant.name}</dd></div>
-          <div className="flex justify-between"><dt>Coupon</dt><dd>{stack.coupon ? `${stack.coupon.coupon.code} −${formatCents(stack.coupon.savings_cents)}` : 'None'}</dd></div>
-          <div className="flex justify-between"><dt>Card</dt><dd>{stack.ranking.find((r) => r.is_winner)?.card_name ?? 'No accepted card'}</dd></div>
-          <div className="flex justify-between"><dt>Rewards</dt><dd>{formatCents(stack.rewards_value_cents)}</dd></div>
-          <div className="flex justify-between font-semibold"><dt>Total value</dt><dd>{formatCents(stack.total_value_cents)} ({formatPct(stack.total_value_pct)})</dd></div>
-        </dl>
-      )}
-    </section>
+    <MotionConfig reducedMotion="user">
+      <section aria-label="Scan">
+        <ScreenHeader title="Scan" subtitle={<DemoBadge>Coupons are simulated · not verified offers</DemoBadge>} />
+
+        {pending && (
+          <div className="flex flex-col items-center gap-4 rounded-3xl bg-white/[0.04] p-6">
+            {pending.kind === 'upload' && preview && (
+              <img src={preview} alt="Your cart screenshot" className="max-h-56 rounded-xl object-contain opacity-80" />
+            )}
+            <Loading label={LOADING_LABEL[pending.kind]} />
+            <button type="button" onClick={startOver} className="text-sm text-white/55 hover:text-white/80">
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {failure && (
+          <div className="mb-4">
+            <ErrorNotice error={failure.error} onRetry={() => void run(failure.request)} />
+          </div>
+        )}
+
+        {showInput && (
+          <CartInput onUpload={upload} onSample={() => void run({ kind: 'sample' })} onManual={(body) => void run({ kind: 'stack', body })} />
+        )}
+
+        {result && (
+          <div className="space-y-3">
+            <StackResult stack={result.stack} parse={result.parse} cards={cards} />
+            <Reveal order={3}>
+              <CardUsedPicker key={result.id} stack={result.stack} cards={cards} />
+            </Reveal>
+            <button
+              type="button"
+              onClick={startOver}
+              className="w-full rounded-2xl bg-white/10 py-3 text-sm font-medium transition-[background-color,transform] duration-150 hover:bg-white/15 active:scale-[0.97]"
+            >
+              Scan another cart
+            </button>
+          </div>
+        )}
+      </section>
+    </MotionConfig>
   )
 }
