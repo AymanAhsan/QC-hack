@@ -23,3 +23,14 @@ This checkout has no commits, so there is no established commit-message conventi
 ## Security & Configuration
 
 Keep Gemini keys and Tiger Data connection strings in local environment files; commit only an example file with placeholder values. The payment flow is a simulation and must not claim to charge a card or contact a payment terminal.
+
+## Ayman Feature Validation
+
+Ayman's persistence and Missed code can be verified independently of the shared
+app scaffold. From the repository root, install `backend/requirements-ayman.txt`
+in a virtual environment and run `python -m pytest backend/tests -q`.
+In `frontend/ayman-tests/`, run `npm ci`, `npm test`, `npm run typecheck`, and
+`npm run build`; `npm run preview:missed` starts the fixture-only component
+preview at `http://127.0.0.1:5174`. See `docs/AYMAN.md` for engine/app integration,
+storage configuration, and the opt-in live Tiger Data test. These commands do
+not create or replace Omar's shared backend/frontend entry points.
