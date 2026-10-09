@@ -51,9 +51,9 @@ If the phone cannot connect, allow Node.js through the Windows firewall on priva
 ## Checks
 
 ```bash
-cd backend && python -m pytest          # engine + API tests
-cd frontend && npm run typecheck        # TypeScript
-cd frontend && npm run build            # production build
+cd backend && python -m pytest          # engine, API, persistence, cart tests
+cd frontend && npm test                 # Missed screen tests (vitest)
+cd frontend && npm run build            # typecheck + production build
 ```
 
 ## Environment variables

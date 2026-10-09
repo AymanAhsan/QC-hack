@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from engine import EngineError
+from persistence_models import DatabaseUnavailable
 
 
 class ApiError(Exception):
@@ -35,6 +36,10 @@ def install_error_handlers(app: FastAPI) -> None:
     async def _engine_error(_: Request, exc: EngineError) -> JSONResponse:
         status = 404 if exc.code.endswith("not_found") else 422
         return _envelope(status, exc.code, exc.message)
+
+    @app.exception_handler(DatabaseUnavailable)
+    async def _database_unavailable(_: Request, exc: DatabaseUnavailable) -> JSONResponse:
+        return _envelope(503, "database_unavailable", str(exc))
 
     @app.exception_handler(RequestValidationError)
     async def _validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
