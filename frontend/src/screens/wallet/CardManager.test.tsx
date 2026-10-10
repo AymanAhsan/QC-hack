@@ -28,22 +28,17 @@ describe('Card manager', () => {
     await waitFor(() => expect((screen.getByLabelText('Last four digits') as HTMLInputElement).value).toBe(''))
   })
 
-  it('renders artwork and digits at the bottom left and edits and deletes the instance', async () => {
-    const update = vi.spyOn(api, 'updateCard').mockResolvedValue(card)
+  it('renders artwork and digits at the bottom left and deletes the instance', async () => {
     const remove = vi.spyOn(api, 'deleteCard').mockResolvedValue(undefined)
     const onChange = vi.fn().mockResolvedValue(undefined)
     render(<CardManager cards={[card]} onChange={onChange} onClose={() => {}} />)
     const suffix = screen.getByLabelText('Card ending in 0042')
     expect(suffix.className).toContain('bottom-5 left-5')
     expect(suffix.parentElement?.style.backgroundImage).toContain('/cards/amex-gold.svg')
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Amex Gold ending in 0042' }))
-    fireEvent.change(screen.getByLabelText('Last four digits'), { target: { value: '0099' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save card' }))
-    await waitFor(() => expect(update).toHaveBeenCalledWith('ayman', 'saved-card', { type: 'amex-gold', last4: '0099' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Add card' })).toBeTruthy())
+    expect(screen.queryByRole('button', { name: /^Edit / })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Delete Amex Gold ending in 0042' }))
     await waitFor(() => expect(remove).toHaveBeenCalledWith('ayman', 'saved-card'))
-    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(onChange).toHaveBeenCalledOnce())
   })
 
   it('preserves the form and displays a failed save', async () => {
