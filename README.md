@@ -46,13 +46,17 @@ This is a web app (PWA), not an Expo/React Native app, so it does not run in Exp
 3. Open that URL in Safari (iPhone) or Chrome (Android).
 4. Optional: Share → **Add to Home Screen** for a full-screen, app-like launch.
 
+**Store detection needs HTTPS.** At startup the app asks the browser for your location and matches it to the demo stores, so the Wallet opens with the best card already lifted. Browsers only share location on HTTPS or `localhost`, so over the plain-`http` LAN URL above the Wallet shows "Browsers only share location over HTTPS or localhost" and you pick a store manually instead. To try real detection on a phone, serve the dev server over HTTPS (for example an HTTPS tunnel to port 5173).
+
+On a computer, the quickest check is Chrome DevTools → ⋮ → More tools → **Sensors** → Location → Other…, then reload. Trader Joe's is `40.73342, -73.98788` (best card: Amex Gold), Costco is `40.79564, -73.93088` (Chase Freedom, Visa only). For demos (including a phone over plain `http`), add `?geo=lat,lng[,accuracy_m]` to the URL, e.g. `http://<computer-ip>:5173/?geo=40.79564,-73.93088`; it replaces the device's fix and needs no permission prompt. Accuracy defaults to 10 m. The match radius is about 75 m and only the 10 demo stores are recognised.
+
 If the phone cannot connect, allow Node.js through the Windows firewall on private networks (Windows prompts the first time `npm run dev` runs), or check that the Wi-Fi isn't a guest/isolated network. The backend can stay on `127.0.0.1`; the phone only talks to Vite.
 
 ## Checks
 
 ```bash
 cd backend && python -m pytest          # engine, API, persistence, cart tests
-cd frontend && npm test                 # Missed screen tests (vitest)
+cd frontend && npm test                 # Missed, Wallet, and store-detection tests (vitest)
 cd frontend && npm run build            # typecheck + production build
 ```
 

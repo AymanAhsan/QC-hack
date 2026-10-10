@@ -94,6 +94,20 @@ export interface LocationsResponse {
   is_demo_data: true
 }
 
+export interface DetectLocationRequest {
+  lat: number
+  lng: number
+  /** Horizontal accuracy radius of the fix, in metres. */
+  accuracy_m?: number
+}
+
+export interface DetectLocationResponse {
+  status: 'matched' | 'no_match' | 'low_accuracy'
+  /** Set when matched. `distance_m` is the measured distance from the fix. */
+  location: Location | null
+  is_demo_data: true
+}
+
 // ---------------------------------------------------------------- recommend
 
 export interface CardEvaluation {
