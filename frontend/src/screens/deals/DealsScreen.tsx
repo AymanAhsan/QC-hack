@@ -43,7 +43,7 @@ export function DealsScreen() {
         {!categories && !error && <Loading />}
         {categories && (
           <>
-            <div role="tablist" aria-label="Deal categories" className="mb-4 flex rounded-full bg-white/10 p-1">
+            <div role="tablist" aria-label="Deal categories" className="mb-4 flex rounded-full bg-white/10 p-1 lg:max-w-lg">
               {categories.map((c, i) => {
                 const selected = c.id === active
                 return (
@@ -77,7 +77,7 @@ export function DealsScreen() {
             </div>
             <div id="deals-panel" role="tabpanel" aria-labelledby={`deals-tab-${active}`}>
               <p className="mb-3 text-xs text-white/45">Best coupon + best card in your wallet, at a typical order size. Tap one to open it in Scan.</p>
-              <ul className="space-y-2">
+              <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                 {current?.deals.map((deal, i) => (
                   <li key={deal.merchant.id}>
                     <DealCard

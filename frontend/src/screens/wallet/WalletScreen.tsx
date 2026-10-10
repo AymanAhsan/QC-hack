@@ -246,6 +246,7 @@ export function WalletScreen() {
   const losers = located ? rec.ranking.filter((e) => e.card_id !== winnerId) : []
   const lifted = phase === 'read' || phase === 'success' || phase === 'receipt'
   const busy = phase === 'scan' || phase === 'read' || phase === 'success'
+  const showWhy = located && rec.why !== null
 
   const deckHeight = cards.length === 0 ? 0 : !located
     ? (cards.length - 1) * idleStep + cardH
@@ -334,7 +335,9 @@ export function WalletScreen() {
           </p>
         )}
 
-        <div ref={deckRef} className="flex w-full justify-center">
+        {/* Phone: deck, why drawer, sticky pay bar. Desktop: deck + pay on the left, why drawer on the right. */}
+        <div className="flex flex-1 flex-col lg:grid lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10">
+        <div ref={deckRef} className={`flex w-full justify-center lg:row-start-1 ${showWhy ? 'lg:col-start-1' : 'lg:col-span-2'}`}>
           <motion.div
             className="relative shrink-0 [clip-path:inset(-60px_-60px_0_-60px)]"
             style={{ width: cardW }}
@@ -375,20 +378,21 @@ export function WalletScreen() {
           </motion.div>
         </div>
 
-        {located && rec.why && (
-          <div className="mt-4">
+        {showWhy && (
+          <div className="mt-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">
             <WhyDrawer rec={rec} />
           </div>
         )}
 
         {/* Pay bar stays reachable at the bottom of the scroll area */}
-        <div className="sticky bottom-0 z-30 -mx-4 mt-auto flex flex-col items-center bg-gradient-to-b from-transparent to-black to-[28px] px-4 pb-2 pt-5">
+        <div className={`sticky bottom-0 z-30 -mx-4 mt-auto flex flex-col items-center bg-gradient-to-b from-transparent to-black to-[28px] px-4 pb-2 pt-5 lg:static lg:row-start-2 lg:mx-0 lg:bg-none lg:pt-8 ${showWhy ? 'lg:col-start-1' : 'lg:col-span-2'}`}>
           <PayButton phase={phase} disabled={!located || !winnerId || phase === 'receipt'} onHoldStart={holdStart} onHoldEnd={holdEnd} />
           {located && !busy && (
             <button type="button" onClick={leaveStore} className="mt-1 text-[13px] text-white/40 hover:text-white/60">
               Leave store
             </button>
           )}
+        </div>
         </div>
 
         <StorePicker open={pickerOpen} locations={locations} currentId={located ? rec.merchant.id : null} onPick={arriveAt} onClose={() => setPickerOpen(false)} />
