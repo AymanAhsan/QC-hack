@@ -17,8 +17,6 @@ export interface CardCreate {
   last4: string
 }
 
-export type CardUpdate = Partial<CardCreate>
-
 export interface ApiErrorBody {
   code: string
   message: string
@@ -91,6 +89,20 @@ export interface Location {
 
 export interface LocationsResponse {
   locations: Location[]
+  is_demo_data: true
+}
+
+export interface DetectLocationRequest {
+  lat: number
+  lng: number
+  /** Horizontal accuracy radius of the fix, in metres. */
+  accuracy_m?: number
+}
+
+export interface DetectLocationResponse {
+  status: 'matched' | 'no_match' | 'low_accuracy'
+  /** Set when matched. `distance_m` is the measured distance from the fix. */
+  location: Location | null
   is_demo_data: true
 }
 

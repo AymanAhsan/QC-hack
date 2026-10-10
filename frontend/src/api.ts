@@ -7,10 +7,11 @@
 import type {
   Card,
   CardCreate,
-  CardUpdate,
   CartParseResponse,
   DealFeed,
   DealsResponse,
+  DetectLocationRequest,
+  DetectLocationResponse,
   HealthResponse,
   LocationsResponse,
   MissedResponse,
@@ -22,6 +23,8 @@ import type {
   WalletResponse,
 } from './types'
 
+// Vercel routes browser requests at /api to the backend, preserving the prefix.
+// Keep VITE_API_BASE_URL unset there. Runtime service bindings are server-only.
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 
 export function activeUserId(): string {
@@ -106,9 +109,6 @@ export const api = {
   createCard: (userId: string, body: CardCreate) =>
     request<Card>(`/api/users/${encodeURIComponent(userId)}/cards`, json('POST', body)),
 
-  updateCard: (userId: string, cardId: string, body: CardUpdate) =>
-    request<Card>(`/api/users/${encodeURIComponent(userId)}/cards/${encodeURIComponent(cardId)}`, json('PATCH', body)),
-
   deleteCard: (userId: string, cardId: string) =>
     request<void>(`/api/users/${encodeURIComponent(userId)}/cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' }),
 
@@ -117,6 +117,10 @@ export const api = {
   wallet: (signal?: AbortSignal) => request<WalletResponse>('/api/wallet', { signal }),
 
   locations: (signal?: AbortSignal) => request<LocationsResponse>('/api/locations', { signal }),
+
+  /** Which demo store is this GPS fix in? POST keeps coordinates out of the URL. */
+  detectLocation: (body: DetectLocationRequest, signal?: AbortSignal) =>
+    request<DetectLocationResponse>('/api/locations/detect', json('POST', body, signal)),
 
   recommend: (merchantId: string, amountCents?: number, signal?: AbortSignal) =>
     request<RecommendResponse>(`/api/recommend${query({ merchant_id: merchantId, amount_cents: amountCents })}`, { signal }),

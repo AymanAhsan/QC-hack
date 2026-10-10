@@ -7,10 +7,15 @@
 //
 // GET /api/wallet + /api/locations on mount, GET /api/recommend per store,
 // POST /api/transactions on success. Payments are simulated only.
+//
+// The store comes from the startup location check (location.tsx): once a store
+// is detected the screen arrives there by itself. The picker stays as the manual
+// override and the demo fallback.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MotionConfig, motion } from 'motion/react'
 import { api, newIdempotencyKey } from '../../api'
+import { useStoreDetection } from '../../location'
 import { useNav } from '../../navigation'
 import type { Card, Location, RecommendResponse } from '../../types'
 import { formatCents, parseDollarsToCents } from '../../lib/format'
@@ -20,6 +25,7 @@ import { WhyDrawer } from './WhyDrawer'
 import { PayButton } from './PayButton'
 import { Receipt, type ReceiptData } from './Receipt'
 import { StorePicker } from './StorePicker'
+import { DetectionNotice } from './DetectionNotice'
 import { CardManager } from './CardManager'
 import { playChime, unlockAudio, vibrateSuccess, vibrateTick } from './feedback'
 import { HANDSHAKE_MS, READ_DURATION_MS, RECEIPT_DELAY_MS } from './timing'
@@ -49,6 +55,9 @@ function useWidth<T extends HTMLElement>() {
 
 export function WalletScreen() {
   const nav = useNav()
+  const detection = useStoreDetection()
+  // Latest detection id already acted on (or deliberately skipped by the user).
+  const handledDetection = useRef(0)
   const [cards, setCards] = useState<Card[] | null>(null)
   const [locations, setLocations] = useState<Location[]>([])
   const [loadError, setLoadError] = useState<unknown>(null)
@@ -58,6 +67,8 @@ export function WalletScreen() {
   const [rec, setRec] = useState<RecommendResponse | null>(null)
   const [recError, setRecError] = useState<unknown>(null)
   const [arriving, setArriving] = useState<Location | null>(null)
+  // Metres from the store when the lifted store was auto-detected; null for a manual pick.
+  const [detectedDistanceM, setDetectedDistanceM] = useState<number | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [phase, setPhaseState] = useState<PayPhase>('idle')
   const [receipt, setReceipt] = useState<ReceiptData | null>(null)
@@ -108,7 +119,11 @@ export function WalletScreen() {
 
   // ── Location ──────────────────────────────────────────────────────
 
-  const arriveAt = (loc: Location, amountCents?: number) => {
+  /**
+   * `detectedM` is the measured distance when the store came from the location check.
+   * `amountCents` is a typed checkout total; omitted, the store's typical spend is used.
+   */
+  const arriveAt = (loc: Location, detectedM: number | null = null, amountCents?: number) => {
     setPickerOpen(false)
     clearTimers()
     recAbort.current?.abort()
@@ -123,6 +138,7 @@ export function WalletScreen() {
         setReceipt(null)
         setPhase('located')
         setArriving(null)
+        setDetectedDistanceM(detectedM)
       },
       (e) => {
         if (ctrl.signal.aborted) return
@@ -142,18 +158,31 @@ export function WalletScreen() {
     }
     if (cents === rec.amount_cents) return
     const loc = locations.find((l) => l.id === rec.merchant.id)
-    if (loc) arriveAt(loc, cents)
+    if (loc) arriveAt(loc, detectedDistanceM, cents)
   }
 
   const leaveStore = () => {
     clearTimers()
     recAbort.current?.abort()
+    // The user chose to be nowhere: do not re-arrive at this detection.
+    handledDetection.current = detection.id
     setArriving(null)
     setRec(null)
+    setDetectedDistanceM(null)
     setReceipt(null)
     setRecError(null)
     setPhase('idle')
   }
+
+  // Arrive at the detected store once per detection, and only from idle, so a
+  // manual pick, a payment in progress, or an open picker is never overridden.
+  useEffect(() => {
+    const { status, location, id } = detection
+    if (status !== 'detected' || !location || id === handledDetection.current) return
+    if (!cards?.length || phase !== 'idle' || pickerOpen) return
+    handledDetection.current = id
+    arriveAt(location, location.distance_m)
+  }, [detection, cards, phase, pickerOpen])
 
   // ── Purchase logging ──────────────────────────────────────────────
 
@@ -275,6 +304,8 @@ export function WalletScreen() {
 
         {managerOpen && <CardManager cards={cards} onClose={() => setManagerOpen(false)} onChange={async () => {
           leaveStore()
+          // The wallet changed, so the detected store's best card may too: let it re-apply.
+          handledDetection.current = 0
           const wallet = await api.wallet()
           setCards(wallet.cards)
         }} />}
@@ -322,6 +353,8 @@ export function WalletScreen() {
             </label>
           )}
         </div>
+
+        <DetectionNotice detection={detection} detectedDistanceM={detectedDistanceM} located={located || arriving !== null} />
 
         {recError ? (
           <div className="mb-4">

@@ -1,4 +1,5 @@
 import { NavProvider, useNav, type Tab } from './navigation'
+import { LocationProvider } from './location'
 import { SideNav, TabBar } from './components/TabBar'
 import { DevStatus } from './components/DevStatus'
 import { WalletScreen } from './screens/wallet/WalletScreen'
@@ -35,7 +36,10 @@ function Shell() {
 export default function App() {
   return (
     <NavProvider>
-      <Shell />
+      {/* Above the screens so the location check runs at startup, not when Wallet opens. */}
+      <LocationProvider>
+        <Shell />
+      </LocationProvider>
     </NavProvider>
   )
 }

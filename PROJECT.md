@@ -135,7 +135,7 @@ Purchase saved to Tiger Data ──► missed-cashback counter updates
 Wallet idle (cards fanned)
         │
         ▼
-Mock location detected (e.g. Costco)
+Store detected from the device's location at startup (or picked in the demo, e.g. Costco)
         │
         ▼
 Engine ranks cards: network check ► MCC check ► yield
@@ -170,7 +170,7 @@ Open Missed tab ► live counter of money lost ► daily chart ► per-purchase 
 |---|---|
 | Cards | Persistent per-user wallets; choose among six mock card types with realistic multipliers, point valuations, and networks |
 | Stores | A hardcoded dictionary of popular merchants (Nike, Delta, UberEats, Whole Foods, and so on) with category, MCC code, and accepted networks |
-| Locations | Mock store locations the user picks to simulate "arriving" somewhere |
+| Locations | Each demo store has hardcoded coordinates. At startup the device's GPS fix is matched to the nearest one (about 75 m); the user can still pick a store to simulate "arriving" when detection is unavailable (permission denied, plain `http` on a phone, nowhere near a demo store) |
 | Coupons | Hardcoded realistic promo codes per merchant (`WELCOME10`, `SAVE15`, `FREESHIP`) |
 | Unknown stores | Gemini is asked to generate a realistic promo code, discount percentage, and description for the store name |
 | Transactions | Simulated spending history, seeded so the missed-cashback counter has data |
@@ -208,6 +208,7 @@ Why hardcode: zero latency, no third-party rate limits during a live demo, and t
 |---|---|
 | `GET /api/wallet` | The user's mock cards |
 | `GET /api/locations` | Mock stores for the in-store flow |
+| `POST /api/locations/detect` | Which demo store a GPS fix is in |
 | `GET /api/recommend` | Ranked cards and the "why" breakdown for a store |
 | `POST /api/cart/parse` | Cart screenshot in, parsed items and Triple Stack out |
 | `POST /api/stack` | Triple Stack for a typed store name and amount |

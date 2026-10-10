@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { LocationProvider } from '../../location'
 import { NavProvider } from '../../navigation'
 import { WalletScreen } from './WalletScreen'
 // Real responses captured from the backend (GET /api/wallet, /api/locations, /api/recommend).
@@ -29,7 +30,9 @@ vi.mock('../../api', async (importOriginal) => {
 async function arriveAtTraderJoes() {
   const view = render(
     <NavProvider>
-      <WalletScreen />
+      <LocationProvider>
+        <WalletScreen />
+      </LocationProvider>
     </NavProvider>,
   )
   fireEvent.click(await screen.findByRole('button', { name: /Simulate arriving at a store/ }))

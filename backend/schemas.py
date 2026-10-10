@@ -126,6 +126,22 @@ class LocationsResponse(BaseModel):
     is_demo_data: Literal[True] = True
 
 
+class DetectLocationRequest(StrictRequest):
+    lat: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    lng: float = Field(ge=-180, le=180, allow_inf_nan=False)
+    accuracy_m: float | None = Field(
+        default=None, ge=0, allow_inf_nan=False, description="Horizontal accuracy radius of the fix, in metres."
+    )
+
+
+class DetectLocationResponse(BaseModel):
+    status: Literal["matched", "no_match", "low_accuracy"]
+    location: LocationOut | None = Field(
+        description="Set when status is matched. Its distance_m is the measured distance from the fix, not the mock list distance."
+    )
+    is_demo_data: Literal[True] = True
+
+
 # --------------------------------------------------------------------------- recommend
 
 
