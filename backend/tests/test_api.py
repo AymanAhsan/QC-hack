@@ -93,3 +93,16 @@ def test_transactions_rejects_client_totals():
         },
     )
     assert r.status_code == 422
+
+
+def test_card_benefits_endpoint():
+    body = client.get("/api/wallet/chase-freedom/benefits").json()
+    assert body["card"]["id"] == "chase-freedom" and body["is_demo_data"] is True
+    assert body["benefits"][-1]["kind"] == "base"
+    assert [s["merchant_id"] for s in body["best_at"]][:1] == ["costco"]
+    amex = client.get("/api/wallet/amex-gold/benefits").json()
+    assert amex["not_accepted_at"][0] == {
+        "merchant_id": "costco", "merchant_name": "Costco", "emoji": "📦", "yield_pct": None, "accepts": ["visa"],
+    }
+    r = client.get("/api/wallet/no-such-card/benefits")
+    assert r.status_code == 404 and r.json()["error"]["code"] == "card_not_found"

@@ -11,6 +11,7 @@ import recTraderJoes100 from './__fixtures__/recommend-trader-joes-100.json'
 
 const createTransaction = vi.fn()
 const recommend = vi.fn()
+const cardBenefits = vi.fn()
 
 vi.mock('../../api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../api')>()
@@ -23,6 +24,7 @@ vi.mock('../../api', async (importOriginal) => {
       locations: async () => locations,
       recommend: (...args: unknown[]) => recommend(...args),
       createTransaction: (...args: unknown[]) => createTransaction(...args),
+      cardBenefits: (...args: unknown[]) => cardBenefits(...args),
     },
   }
 })
@@ -141,5 +143,19 @@ describe('Wallet hold-to-pay', () => {
     fireEvent.blur(amount)
     expect((amount as HTMLInputElement).value).toBe('42.50')
     expect(recommend).toHaveBeenCalledTimes(1)
+  })
+
+  it("opens a card's benefits on tap, but not mid-payment", async () => {
+    cardBenefits.mockReturnValue(new Promise(() => {}))
+    const pay = await arriveAtTraderJoes()
+    fireEvent.click(screen.getByRole('button', { name: 'Chase Freedom benefits' }))
+    expect(screen.getByRole('dialog', { name: 'Chase Freedom benefits' })).toBeTruthy()
+    expect(cardBenefits).toHaveBeenCalledWith('chase-freedom', expect.anything())
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'Chase Freedom benefits' })).toBeNull())
+
+    fireEvent.pointerDown(pay, { pointerId: 1 })
+    expect((screen.getByRole('button', { name: 'Amex Gold benefits' }) as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.pointerUp(pay, { pointerId: 1 })
   })
 })

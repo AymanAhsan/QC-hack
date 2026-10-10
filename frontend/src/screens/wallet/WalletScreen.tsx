@@ -25,6 +25,7 @@ import { WhyDrawer } from './WhyDrawer'
 import { PayButton } from './PayButton'
 import { Receipt, type ReceiptData } from './Receipt'
 import { StorePicker } from './StorePicker'
+import { CardBenefitsSheet } from './CardBenefitsSheet'
 import { DetectionNotice } from './DetectionNotice'
 import { CardManager } from './CardManager'
 import { playChime, unlockAudio, vibrateSuccess, vibrateTick } from './feedback'
@@ -70,6 +71,8 @@ export function WalletScreen() {
   // Metres from the store when the lifted store was auto-detected; null for a manual pick.
   const [detectedDistanceM, setDetectedDistanceM] = useState<number | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [benefitsCard, setBenefitsCard] = useState<Card | null>(null)
+  const closeBenefits = useCallback(() => setBenefitsCard(null), [])
   const [phase, setPhaseState] = useState<PayPhase>('idle')
   const [receipt, setReceipt] = useState<ReceiptData | null>(null)
   const [amountText, setAmountText] = useState('')
@@ -368,6 +371,10 @@ export function WalletScreen() {
           </p>
         )}
 
+        {cards.length > 0 && !busy && phase !== 'receipt' && (
+          <p className="mb-2 text-center text-xs text-white/35">Tap a card to see its benefits</p>
+        )}
+
         {/* Phone: deck, why drawer, sticky pay bar. Desktop: deck + pay on the left, why drawer on the right. */}
         <div className="flex flex-1 flex-col lg:grid lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10">
         <div ref={deckRef} className={`flex w-full justify-center lg:row-start-1 ${showWhy ? 'lg:col-start-1' : 'lg:col-span-2'}`}>
@@ -390,6 +397,14 @@ export function WalletScreen() {
                   transition={isWinner && lifted ? { type: 'spring', stiffness: 500, damping: 14 } : { ...SPRING, delay: located ? 0 : idx * 0.03 }}
                 >
                   <WalletCard card={card} width={cardW} height={cardH} evaluation={located ? evalById.get(card.id) : undefined} isWinner={isWinner} />
+                  {/* Whole-card tap target; on a stacked card only its visible strip is reachable. */}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setBenefitsCard(card)}
+                    aria-label={`${card.name} benefits`}
+                    className="absolute inset-0 cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400 disabled:cursor-default"
+                  />
                   {isWinner && phase === 'scan' && (
                     // Proximity radar: concentric cyan rings from the card's top edge
                     <span aria-hidden="true" className="pointer-events-none absolute left-1/2 top-0 z-10">
@@ -428,6 +443,7 @@ export function WalletScreen() {
         </div>
         </div>
 
+        <CardBenefitsSheet card={benefitsCard} onClose={closeBenefits} />
         <StorePicker open={pickerOpen} locations={locations} currentId={located ? rec.merchant.id : null} onPick={arriveAt} onClose={() => setPickerOpen(false)} />
         <Receipt
           data={phase === 'receipt' ? receipt : null}

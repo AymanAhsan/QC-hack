@@ -174,3 +174,40 @@ def test_why_breakdown():
     assert why["advantage"]["runner_up"]["card_id"] == "venture-x"
     tj = build_why(rank_cards(WALLET, merchant("trader-joes"), 4250), merchant("trader-joes"), 4250)
     assert tj["valuation"]["summary"] == "1.8% base → 4x points @ 1.8¢ = 7.2% net value"
+
+
+def test_card_benefits_lists_rates_wins_and_rejections():
+    from data import MERCHANTS
+    from engine import card_benefits
+
+    amex = card_benefits(get_card("amex-gold"), WALLET, MERCHANTS)
+    assert amex["valuation_label"] == "Points worth 1.8¢ each"
+    labels = [(r["kind"], r["label"], r["yield_pct"]) for r in amex["benefits"]]
+    assert labels == [
+        ("category", "Dining", Decimal("7.20")),
+        ("category", "Grocery", Decimal("7.20")),
+        ("category", "Airfare", Decimal("5.40")),
+        ("base", "Everything else", Decimal("1.80")),
+    ]
+    grocery = next(r for r in amex["benefits"] if r["key"] == "grocery")
+    assert grocery["applies_to"] == ["Trader Joe's", "Whole Foods"]
+    wins = {m.id for m, _ in amex["best_at"]}
+    assert {"trader-joes", "delta"} <= wins and "costco" not in wins and "target" not in wins
+    assert [m.id for m in amex["not_accepted_at"]] == ["costco"]
+
+    apple = card_benefits(get_card("apple-card"), WALLET, MERCHANTS)
+    assert apple["benefits"][0]["kind"] == "merchant" and apple["benefits"][0]["rate_label"] == "3% cash back"
+    assert {m.id for m, _ in apple["best_at"]} >= {"nike"}
+
+    debit = card_benefits(get_card("everyday-debit"), WALLET, MERCHANTS)
+    assert debit["valuation_label"] == "No rewards" and debit["best_at"] == []
+
+
+def test_card_benefits_wins_follow_the_wallet():
+    from data import MERCHANTS
+    from engine import card_benefits
+
+    # Without Amex Gold in the wallet, Chase Sapphire takes over dining.
+    wallet = [c for c in WALLET if c.id != "amex-gold"]
+    sapphire = card_benefits(get_card("chase-sapphire"), wallet, MERCHANTS)
+    assert "chipotle" in {m.id for m, _ in sapphire["best_at"]}

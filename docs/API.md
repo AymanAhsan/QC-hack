@@ -132,6 +132,30 @@ the selected ID in local storage. User IDs are demo selectors, not authenticatio
 this app has no login or authorization layer. `/api/missed` remains the shared demo
 transaction history.
 
+## GET /api/wallet/{card_id}/benefits
+
+Everything one card in the caller's wallet earns, computed by the engine (`engine.card_benefits`). Uses the same `X-User-ID` wallet as `GET /api/wallet`. Unknown card: `404 card_not_found`.
+
+```json
+{
+  "card": { "id": "amex-gold", "...": "Card" },
+  "valuation_label": "Points worth 1.8¢ each",
+  "benefits": [
+    { "kind": "category", "key": "dining", "label": "Dining", "emoji": null, "multiplier": 4.0, "yield_pct": 7.2,
+      "rate_label": "4x points", "applies_to": ["Chipotle", "Sweetgreen", "Starbucks", "UberEats", "DoorDash"] },
+    { "kind": "base", "key": "base", "label": "Everything else", "emoji": null, "multiplier": 1.0, "yield_pct": 1.8,
+      "rate_label": "1x points", "applies_to": [] }
+  ],
+  "best_at": [ { "merchant_id": "trader-joes", "merchant_name": "Trader Joe's", "emoji": "🛒", "yield_pct": 7.2, "accepts": ["visa", "mastercard", "amex"] } ],
+  "not_accepted_at": [ { "merchant_id": "costco", "merchant_name": "Costco", "emoji": "📦", "yield_pct": null, "accepts": ["visa"] } ],
+  "is_demo_data": true
+}
+```
+
+- `benefits`: store bonuses and category bonuses sorted by `yield_pct` (highest first), then the base rate last. `kind` is `merchant` | `category` | `base`.
+- `best_at`: demo stores where this card wins `rank_cards` for this wallet at the store's `typical_cents`, the same rule as `/api/recommend`.
+- `not_accepted_at`: demo stores whose terminals reject this card's network.
+
 ## GET /api/locations
 
 Mock in-store locations sorted by fake distance.
