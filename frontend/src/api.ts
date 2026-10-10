@@ -10,6 +10,8 @@ import type {
   CartParseResponse,
   DealFeed,
   DealsResponse,
+  DetectLocationRequest,
+  DetectLocationResponse,
   HealthResponse,
   LocationsResponse,
   MissedResponse,
@@ -113,6 +115,10 @@ export const api = {
   wallet: (signal?: AbortSignal) => request<WalletResponse>('/api/wallet', { signal }),
 
   locations: (signal?: AbortSignal) => request<LocationsResponse>('/api/locations', { signal }),
+
+  /** Which demo store is this GPS fix in? POST keeps coordinates out of the URL. */
+  detectLocation: (body: DetectLocationRequest, signal?: AbortSignal) =>
+    request<DetectLocationResponse>('/api/locations/detect', json('POST', body, signal)),
 
   recommend: (merchantId: string, amountCents?: number, signal?: AbortSignal) =>
     request<RecommendResponse>(`/api/recommend${query({ merchant_id: merchantId, amount_cents: amountCents })}`, { signal }),

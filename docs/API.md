@@ -145,6 +145,35 @@ Mock in-store locations sorted by fake distance.
 }
 ```
 
+## POST /api/locations/detect
+
+Which demo store is this GPS fix in? The frontend calls it once at app start with the browser Geolocation fix, and the Wallet screen then lifts the best card for the match without a tap. It is a POST so coordinates stay out of URLs and access logs; the fix is used for the match and dropped (nothing is stored or logged).
+
+```json
+{ "lat": 40.73342, "lng": -73.98788, "accuracy_m": 12 }
+```
+
+`accuracy_m` (optional, ≥ 0) is the Geolocation API's horizontal accuracy radius in metres; omitted means "treat as exact".
+
+```json
+{
+  "status": "matched",
+  "location": {
+    "id": "trader-joes", "address": "142 E 14th St, New York, NY", "distance_m": 18,
+    "merchant": { "...": "Merchant, see below" }
+  },
+  "is_demo_data": true
+}
+```
+
+| `status` | `location` | Meaning |
+|---|---|---|
+| `matched` | set | The nearest demo store is within 75 m of the fix, plus up to 50 m of the fix's own `accuracy_m`. Nearest wins when two stores qualify. `location.distance_m` is the **measured** distance from the fix (the `/api/locations` list uses mock distances). |
+| `no_match` | `null` | Good fix, but no demo store in range. |
+| `low_accuracy` | `null` | `accuracy_m` above 200 m (Wi-Fi/IP-based fixes): too coarse to name one store, so it never guesses. |
+
+Only the 10 in-store demo locations are matched, using coordinates geocoded from their addresses (`LOCATION_COORDS` in `backend/data.py`). Out-of-range or malformed `lat`/`lng`, non-finite numbers, and unknown fields return 422 `validation_error`. Browsers only expose geolocation on HTTPS or `localhost`; the frontend reports other origins as "insecure" and falls back to the manual store picker.
+
 Merchant object (also used by recommend, stack, deals):
 
 ```json
@@ -362,6 +391,7 @@ Query: `days` (default 30, 1–365), `limit` for `recent` (default 50, 1–200).
 | Module | Owner | Interface other modules rely on |
 |---|---|---|
 | `engine.py` | Omar | `rank_cards`, `triple_stack`, `evaluate_purchase`, `missed_rewards`, `EngineError(code, message)` |
+| `location_detect.py` | Omar | `detect_store(lat, lng, accuracy_m, stores) -> Detection` (pure geofence match) |
 | `services.py` | Omar | `await resolve_merchant(merchant_id, merchant_name) -> (Merchant, coupons)` |
 | `serializers.py` | Omar | `stack_out`, `merchant_out`, `evaluation_out`, ... |
 | `db.py` | Ayman | `init()` at startup (connect, migrate, seed idempotently); `mode() -> str`; `get_db()` FastAPI dependency |

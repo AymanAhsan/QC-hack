@@ -354,6 +354,21 @@ _LOCATION_DISTANCE_M = {
     "sweetgreen": 210, "starbucks": 40, "shell": 1600, "cvs": 180, "nike": 1100,
 }
 
+# (latitude, longitude) of each in-store location's address, geocoded from
+# OpenStreetMap. Good to roughly 100 m, which is all store detection needs.
+LOCATION_COORDS: dict[str, tuple[float, float]] = {
+    "trader-joes": (40.73342, -73.98788),
+    "costco": (40.79564, -73.93088),
+    "whole-foods": (40.73653, -73.98927),
+    "target": (40.71453, -74.01127),
+    "chipotle": (40.73732, -73.98996),
+    "sweetgreen": (40.74482, -73.98863),
+    "starbucks": (40.73005, -73.99205),
+    "shell": (40.84793, -73.93138),
+    "cvs": (40.73332, -73.98076),
+    "nike": (40.75974, -73.97678),
+}
+
 _BY_ID = {m.id: m for m in MERCHANTS}
 _CARDS_BY_ID = {c.id: c for c in WALLET}
 
