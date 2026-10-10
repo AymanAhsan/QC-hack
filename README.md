@@ -52,6 +52,57 @@ On a computer, the quickest check is Chrome DevTools → ⋮ → More tools → 
 
 If the phone cannot connect, allow Node.js through the Windows firewall on private networks (Windows prompts the first time `npm run dev` runs), or check that the Wi-Fi isn't a guest/isolated network. The backend can stay on `127.0.0.1`; the phone only talks to Vite.
 
+## Deploy on Vercel
+
+Import this repository as **one project**, with the project Root Directory set
+to the repository root. The root `vercel.json` builds `backend` as FastAPI
+(`main:app`) and `frontend` as Vite (`npm ci`, `npm run build`, output `dist`).
+
+Public requests to `/api/*` reach the backend with the `/api` prefix intact;
+all other paths reach the frontend. `/api/health` is the deployed health check.
+FastAPI's `/docs`, `/redoc`, and `/openapi.json` are not exposed by these rules.
+
+The frontend is a static browser app: it calls the public API on the same
+origin. Leave `VITE_API_BASE_URL` unset in Vercel. No service bindings are
+needed: neither service makes server-side HTTP calls to the other. Do not put
+an internal service URL in a `VITE_*` variable; bindings resolve only in
+runtime functions, not in browser code, builds, or middleware. Gemini and
+Postgres are external dependencies, not services defined in this project.
+
+Configure secrets in Vercel Project Settings → Environment Variables for
+the deployment environments you use:
+
+- `DATABASE_URL`: Tiger Data/Postgres connection string for persistent wallets
+  and transactions. Keep `ALLOW_SQLITE_FALLBACK=false` so a database outage
+  cannot silently move writes into temporary storage.
+- `GEMINI_API_KEY`: optional; omit for the labeled offline AI fallbacks.
+  `GEMINI_MODEL` and the other backend settings use the defaults listed below.
+
+Without `DATABASE_URL`, Vercel uses SQLite in the OS temporary directory.
+That is an ephemeral demo fallback: instances do not share it and data can
+disappear when an instance is recycled. Leave `SQLITE_PATH` unset on Vercel.
+Same-origin API requests do not need a production CORS override.
+
+From the repository root, test services together with a Vercel CLI that
+supports `services`:
+
+```bash
+vercel dev -L
+```
+
+This starts all services locally without cloud authentication. The existing
+two-terminal workflow above still works independently of Vercel. After
+deploying, check `/api/health`, load the Wallet, and log a simulated purchase
+then check Missed to verify database writes and reads.
+
+Vercel CLI 52.0.0 rejects object-form service destinations (`destination
+should be string`). If you see that error, update to a CLI release supporting
+the current `services` configuration before testing this deployment.
+
+References: [Vercel Services](https://vercel.com/docs/services),
+[routing](https://vercel.com/docs/services/routing), and
+[bindings](https://vercel.com/docs/services/bindings).
+
 ## Checks
 
 ```bash

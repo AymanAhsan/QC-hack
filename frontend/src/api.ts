@@ -23,6 +23,8 @@ import type {
   WalletResponse,
 } from './types'
 
+// Vercel routes browser requests at /api to the backend, preserving the prefix.
+// Keep VITE_API_BASE_URL unset there. Runtime service bindings are server-only.
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 
 export function activeUserId(): string {
