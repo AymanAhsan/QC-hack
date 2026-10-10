@@ -103,6 +103,9 @@ export function MissedView({ loadMissed, refreshKey = 0, cardNames = {} }: Misse
       )}
       {summary && (
         <>
+          {/* Desktop: summary column (sticky) beside the chart and history. */}
+          <div className="missed-body">
+          <div className="missed-summary">
           <div className="missed-hero">
             <p>You could have earned</p>
             <div className="missed-total">
@@ -121,6 +124,8 @@ export function MissedView({ loadMissed, refreshKey = 0, cardNames = {} }: Misse
               <strong>{formatCents(summary.total_best_possible_cents)}</strong>
             </div>
           </div>
+          </div>
+          <div className="missed-details">
           {summary.transaction_count === 0 ? (
             <div className="missed-empty">
               <h2>A fresh start</h2>
@@ -184,6 +189,8 @@ export function MissedView({ loadMissed, refreshKey = 0, cardNames = {} }: Misse
               </section>
             </>
           )}
+          </div>
+          </div>
           <p className="missed-disclaimer">
             Simulated purchases and estimated rewards. Daily totals use UTC; the window covers the past{' '}
             {summary.window_days} × 24 hours.
