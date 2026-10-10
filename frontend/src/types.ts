@@ -17,8 +17,6 @@ export interface CardCreate {
   last4: string
 }
 
-export type CardUpdate = Partial<CardCreate>
-
 export interface ApiErrorBody {
   code: string
   message: string

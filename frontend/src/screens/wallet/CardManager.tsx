@@ -20,7 +20,6 @@ interface Props {
 }
 
 export function CardManager({ cards, onChange, onClose }: Props) {
-  const [editing, setEditing] = useState<string | null>(null)
   const [type, setType] = useState<CardType>('amex-gold')
   const [last4, setLast4] = useState('')
   const [userId, setUserId] = useState(activeUserId)
@@ -29,7 +28,6 @@ export function CardManager({ cards, onChange, onClose }: Props) {
   const inputClass = 'min-w-0 w-full rounded-xl border border-white/20 bg-black p-3 text-white'
 
   const reset = () => {
-    setEditing(null)
     setType('amex-gold')
     setLast4('')
   }
@@ -50,9 +48,7 @@ export function CardManager({ cards, onChange, onClose }: Props) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    void mutate(() => editing
-      ? api.updateCard(activeUserId(), editing, { type, last4 })
-      : api.createCard(activeUserId(), { type, last4 }))
+    void mutate(() => api.createCard(activeUserId(), { type, last4 }))
   }
 
   return (
@@ -75,17 +71,14 @@ export function CardManager({ cards, onChange, onClose }: Props) {
       {error ? <ErrorNotice error={error} /> : null}
       <form onSubmit={submit} className="space-y-3">
         <fieldset disabled={busy} className="space-y-3">
-          <legend className="mb-2 text-sm font-semibold">{editing ? 'Edit card' : 'Add a card'}</legend>
+          <legend className="mb-2 text-sm font-semibold">Add a card</legend>
           <label htmlFor="card-type" className="block text-sm text-white/70">Card type</label>
           <select id="card-type" value={type} onChange={(e) => setType(e.target.value as CardType)} className={inputClass}>
             {CARD_TYPES.map((choice) => <option key={choice.type} value={choice.type}>{choice.name}</option>)}
           </select>
           <label htmlFor="card-last4" className="block text-sm text-white/70">Last four digits</label>
           <input id="card-last4" value={last4} onChange={(e) => setLast4(e.target.value)} inputMode="numeric" autoComplete="off" pattern="[0-9]{4}" maxLength={4} required placeholder="0042" className={inputClass} />
-          <div className="flex gap-3">
-            <button type="submit" className="rounded-xl bg-sky-400 px-4 py-2 font-semibold text-black disabled:opacity-50">{busy ? 'Saving…' : editing ? 'Save card' : 'Add card'}</button>
-            {editing && <button type="button" onClick={reset} className="text-sm text-white/70">Cancel edit</button>}
-          </div>
+          <button type="submit" className="rounded-xl bg-sky-400 px-4 py-2 font-semibold text-black disabled:opacity-50">{busy ? 'Saving…' : 'Add card'}</button>
         </fieldset>
       </form>
       <ul className="mt-5 space-y-4">
@@ -94,12 +87,7 @@ export function CardManager({ cards, onChange, onClose }: Props) {
             <div className="overflow-hidden rounded-2xl">
               <WalletCard card={card} width={260} height={164} />
             </div>
-            <div className="mt-2 flex gap-4">
-              <button type="button" disabled={busy} aria-label={`Edit ${card.name} ending in ${card.last4}`} onClick={() => {
-                setEditing(card.id)
-                setType(card.type)
-                setLast4(card.last4)
-              }} className="text-sm text-sky-300 disabled:opacity-50">Edit</button>
+            <div className="mt-2">
               <button type="button" disabled={busy} aria-label={`Delete ${card.name} ending in ${card.last4}`} onClick={() => void mutate(() => api.deleteCard(activeUserId(), card.id))} className="text-sm text-red-300 disabled:opacity-50">Delete</button>
             </div>
           </li>

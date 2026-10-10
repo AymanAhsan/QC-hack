@@ -7,7 +7,6 @@
 import type {
   Card,
   CardCreate,
-  CardUpdate,
   CartParseResponse,
   DealFeed,
   DealsResponse,
@@ -105,9 +104,6 @@ export const api = {
 
   createCard: (userId: string, body: CardCreate) =>
     request<Card>(`/api/users/${encodeURIComponent(userId)}/cards`, json('POST', body)),
-
-  updateCard: (userId: string, cardId: string, body: CardUpdate) =>
-    request<Card>(`/api/users/${encodeURIComponent(userId)}/cards/${encodeURIComponent(cardId)}`, json('PATCH', body)),
 
   deleteCard: (userId: string, cardId: string) =>
     request<void>(`/api/users/${encodeURIComponent(userId)}/cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' }),
