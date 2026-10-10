@@ -1,12 +1,14 @@
-"""GET /api/wallet, GET /api/locations, and POST /api/locations/detect. Owner: Omar."""
+"""GET /api/wallet, GET /api/wallet/{card_id}/benefits, GET /api/locations, POST /api/locations/detect. Owner: Omar."""
 
 from fastapi import APIRouter, Depends
 
-from data import Card, IN_STORE_LOCATION_IDS, LOCATION_COORDS, get_merchant, location_distance_m
+from data import MERCHANTS, Card, IN_STORE_LOCATION_IDS, LOCATION_COORDS, get_merchant, location_distance_m
+from engine import card_benefits
+from errors import ApiError
 from location_detect import detect_store
 from wallet_service import current_cards, wallet_response
-from schemas import DetectLocationRequest, DetectLocationResponse, LocationOut, LocationsResponse, WalletResponse
-from serializers import merchant_out
+from schemas import BenefitRow, BenefitStore, CardBenefitsResponse, DetectLocationRequest, DetectLocationResponse, LocationOut, LocationsResponse, WalletResponse
+from serializers import card_out, merchant_out
 
 router = APIRouter(prefix="/api", tags=["wallet"])
 
@@ -14,6 +16,27 @@ router = APIRouter(prefix="/api", tags=["wallet"])
 @router.get("/wallet", response_model=WalletResponse)
 def get_wallet(cards: tuple[Card, ...] = Depends(current_cards)) -> WalletResponse:
     return wallet_response(cards)
+
+
+@router.get("/wallet/{card_id}/benefits", response_model=CardBenefitsResponse)
+def get_card_benefits(card_id: str, cards: tuple[Card, ...] = Depends(current_cards)) -> CardBenefitsResponse:
+    card = next((c for c in cards if c.id == card_id), None)
+    if card is None:
+        raise ApiError(404, "card_not_found", f"Card {card_id!r} is not in this wallet.")
+    b = card_benefits(card, cards, MERCHANTS)
+    return CardBenefitsResponse(
+        card=card_out(card),
+        valuation_label=b["valuation_label"],
+        benefits=[BenefitRow(**{**r, "multiplier": float(r["multiplier"]), "yield_pct": float(r["yield_pct"])}) for r in b["benefits"]],
+        best_at=[
+            BenefitStore(merchant_id=m.id, merchant_name=m.name, emoji=m.emoji, yield_pct=float(y), accepts=list(m.accepts))
+            for m, y in b["best_at"]
+        ],
+        not_accepted_at=[
+            BenefitStore(merchant_id=m.id, merchant_name=m.name, emoji=m.emoji, yield_pct=None, accepts=list(m.accepts))
+            for m in b["not_accepted_at"]
+        ],
+    )
 
 
 @router.get("/locations", response_model=LocationsResponse)

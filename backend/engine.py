@@ -390,3 +390,62 @@ def evaluate_purchase(
         best_possible_cents=best_possible,
         missed_cents=missed_rewards(best_possible, used.value_cents),
     )
+
+
+# --------------------------------------------------------------------------- card benefits
+
+
+def _multiplier_label(card: Card, multiplier: Decimal) -> str:
+    return f"{_fmt_num(multiplier)}x points" if card.reward_type == "points" else f"{_fmt_num(multiplier)}% cash back"
+
+
+def card_benefits(card: Card, wallet: Sequence[Card], merchants: Sequence[Merchant]) -> dict:
+    """Everything a card earns, plus where it wins and where it is declined, as plain data.
+
+    - benefits: store bonuses and category bonuses, highest yield first, then the base rate.
+    - best_at: merchants where this card is the winner of rank_cards for this wallet
+      at the merchant's typical spend (same rules as /api/recommend).
+    - not_accepted_at: merchants whose terminals reject this card's network.
+    """
+    by_id = {m.id: m for m in merchants}
+    rows = []
+    for merchant_id, multiplier in card.merchant_rates.items():
+        merchant = by_id.get(merchant_id)
+        if merchant is None:
+            continue
+        rows.append({
+            "kind": "merchant", "key": merchant_id, "label": merchant.name, "emoji": merchant.emoji,
+            "multiplier": multiplier, "yield_pct": round_pct(multiplier * card.cpp),
+            "rate_label": _multiplier_label(card, multiplier), "applies_to": [merchant.name],
+        })
+    for category, multiplier in card.category_rates.items():
+        rows.append({
+            "kind": "category", "key": category, "label": CATEGORY_LABELS.get(category, category), "emoji": None,
+            "multiplier": multiplier, "yield_pct": round_pct(multiplier * card.cpp),
+            "rate_label": _multiplier_label(card, multiplier),
+            "applies_to": [m.name for m in merchants if m.category == category],
+        })
+    rows.sort(key=lambda r: (-r["yield_pct"], r["kind"] != "merchant", r["label"]))
+    rows.append({
+        "kind": "base", "key": "base", "label": "Everything else", "emoji": None,
+        "multiplier": card.base_rate, "yield_pct": round_pct(card.base_rate * card.cpp),
+        "rate_label": _multiplier_label(card, card.base_rate), "applies_to": [],
+    })
+
+    best_at = []
+    not_accepted_at = []
+    for merchant in merchants:
+        if card.network not in merchant.accepts:
+            not_accepted_at.append(merchant)
+            continue
+        winner = winner_of(rank_cards(wallet, merchant, merchant.typical_cents))
+        if winner is not None and winner.card.id == card.id:
+            best_at.append((merchant, round_pct(winner.yield_pct)))
+
+    if card.reward_type == "points":
+        valuation = f"Points worth {_fmt_num(card.cpp)}¢ each"
+    elif card.base_rate == 0 and not card.category_rates and not card.merchant_rates:
+        valuation = "No rewards"
+    else:
+        valuation = "Cash back"
+    return {"valuation_label": valuation, "benefits": rows, "best_at": best_at, "not_accepted_at": not_accepted_at}

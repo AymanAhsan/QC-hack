@@ -5,6 +5,7 @@
 // codes "network_error" and "timeout".
 
 import type {
+  CardBenefitsResponse,
   Card,
   CardCreate,
   CartParseResponse,
@@ -115,6 +116,9 @@ export const api = {
   health: (signal?: AbortSignal) => request<HealthResponse>('/api/health', { signal }),
 
   wallet: (signal?: AbortSignal) => request<WalletResponse>('/api/wallet', { signal }),
+
+  cardBenefits: (cardId: string, signal?: AbortSignal) =>
+    request<CardBenefitsResponse>(`/api/wallet/${encodeURIComponent(cardId)}/benefits`, { signal }),
 
   locations: (signal?: AbortSignal) => request<LocationsResponse>('/api/locations', { signal }),
 

@@ -114,6 +114,34 @@ class MerchantOut(BaseModel):
     coupons: list[CouponOut]
 
 
+class BenefitRow(BaseModel):
+    kind: Literal["merchant", "category", "base"]
+    key: str = Field(description="Merchant id, category id, or 'base'.")
+    label: str
+    emoji: str | None
+    multiplier: float
+    yield_pct: float = Field(description="multiplier x cents per point, percent units.")
+    rate_label: str
+    applies_to: list[str] = Field(description="Demo store names this rate covers; empty for the base rate.")
+
+
+class BenefitStore(BaseModel):
+    merchant_id: str
+    merchant_name: str
+    emoji: str
+    yield_pct: float | None = Field(description="This card's yield there (best_at only).")
+    accepts: list[Network]
+
+
+class CardBenefitsResponse(BaseModel):
+    card: CardOut
+    valuation_label: str
+    benefits: list[BenefitRow]
+    best_at: list[BenefitStore] = Field(description="Stores where this card wins in this wallet, at typical spend.")
+    not_accepted_at: list[BenefitStore] = Field(description="Stores whose terminals reject this card's network.")
+    is_demo_data: Literal[True] = True
+
+
 class LocationOut(BaseModel):
     id: str
     merchant: MerchantOut

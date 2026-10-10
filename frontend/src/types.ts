@@ -51,6 +51,39 @@ export interface WalletResponse {
   is_demo_data: true
 }
 
+export interface BenefitRow {
+  kind: 'merchant' | 'category' | 'base'
+  /** Merchant id, category id, or "base". */
+  key: string
+  label: string
+  emoji: string | null
+  multiplier: number
+  yield_pct: number
+  rate_label: string
+  /** Demo store names this rate covers; empty for the base rate. */
+  applies_to: string[]
+}
+
+export interface BenefitStore {
+  merchant_id: string
+  merchant_name: string
+  emoji: string
+  /** This card's yield there (best_at only). */
+  yield_pct: number | null
+  accepts: Network[]
+}
+
+export interface CardBenefitsResponse {
+  card: Card
+  valuation_label: string
+  benefits: BenefitRow[]
+  /** Stores where this card wins in this wallet, at typical spend. */
+  best_at: BenefitStore[]
+  /** Stores whose terminals reject this card's network. */
+  not_accepted_at: BenefitStore[]
+  is_demo_data: true
+}
+
 export interface Coupon {
   code: string
   kind: CouponKind
