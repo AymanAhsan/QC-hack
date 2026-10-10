@@ -81,7 +81,8 @@ The frontend client (`frontend/src/api.ts`) throws `ApiError` with `status`, `co
 {
   "cards": [
     {
-      "id": "amex-gold", "name": "Amex Gold", "issuer": "American Express", "network": "amex", "last4": "4821",
+      "id": "amex-gold", "user_id": "demo", "type": "amex-gold", "image": "/cards/amex-gold.svg",
+      "name": "Amex Gold", "issuer": "American Express", "network": "amex", "last4": "4821",
       "reward_type": "points", "cpp": 1.8, "base_rate": 1.0,
       "category_rates": { "dining": 4.0, "grocery": 4.0, "airfare": 3.0 }, "merchant_rates": {},
       "gradient": ["#d4af37", "#8a6d1d"], "glow": "#f5c84c", "text_color": "#1a1405", "is_default_debit": false
@@ -93,6 +94,43 @@ The frontend client (`frontend/src/api.ts`) throws `ApiError` with `status`, `co
 ```
 
 Cards: `amex-gold`, `chase-sapphire`, `chase-freedom`, `venture-x`, `apple-card`, `everyday-debit`.
+
+### Per-user card CRUD
+
+Cards persist in `wallet_cards` on SQLite or Postgres. The composite primary key
+`(user_id, id)` scopes every read, update, and deletion to the requested owner.
+User IDs contain 1–64 ASCII letters, digits, underscores, or hyphens and start
+with a letter or digit. New users begin with empty wallets; the `demo` user's
+six planned cards are seeded once. Deleting a demo card survives restart.
+
+| Method | Endpoint | Body / result |
+|---|---|---|
+| GET | `/api/users/{user_id}/cards` | `WalletResponse` |
+| POST | `/api/users/{user_id}/cards` | `{ "type": "amex-gold", "last4": "0042" }` → `Card`, 201 |
+| GET | `/api/users/{user_id}/cards/{card_id}` | `Card`, 200 |
+| PATCH | `/api/users/{user_id}/cards/{card_id}` | `type` and/or `last4` → updated `Card`, 200 |
+| DELETE | `/api/users/{user_id}/cards/{card_id}` | Empty response, 204 |
+
+`type` is one of the six slugs above, matching the cards in `PLANNING.md`.
+`last4` must be a string of exactly four ASCII digits; leading zeroes are retained.
+IDs are generated UUIDs for added cards. Multiple cards of the same type are allowed.
+The server derives names, networks, rewards, colors, and `image` from the selected
+type. Artwork is served by the frontend at `/cards/{type}.svg`; the card component
+overlays the masked last four digits at the bottom left. No full card numbers,
+expiration dates, or security codes are accepted or stored.
+
+Unknown fields, unsupported types, malformed digits, empty PATCH bodies, and
+explicit null updates return 422. A missing card (including another user's card)
+returns `404 card_not_found`. `default_debit_card_id` is null if the wallet has no
+Everyday Debit; otherwise it is the first such card's instance ID.
+
+`X-User-ID` selects the wallet for `/api/wallet`, `/api/recommend`, `/api/stack`,
+`/api/deals`, `/api/cart/parse`, and `/api/transactions`. Omitting it selects `demo`.
+Purchase retry keys are scoped to that user, and rewards use only their saved cards.
+The frontend's Manage cards panel offers CRUD and a demo user switcher, remembering
+the selected ID in local storage. User IDs are demo selectors, not authentication;
+this app has no login or authorization layer. `/api/missed` remains the shared demo
+transaction history.
 
 ## GET /api/locations
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Network = Literal["visa", "mastercard", "amex"]
 RewardType = Literal["points", "cash"]
@@ -20,6 +20,7 @@ CouponKind = Literal["percent", "fixed", "shipping"]
 CouponSource = Literal["demo_catalog", "ai_simulated", "simulated_fallback"]
 Channel = Literal["store", "online"]
 DealFeed = Literal["meals", "clothing", "travel"]
+CardType = Literal["amex-gold", "chase-sapphire", "chase-freedom", "venture-x", "apple-card", "everyday-debit"]
 
 
 class StrictRequest(BaseModel):
@@ -44,10 +45,13 @@ class ErrorResponse(BaseModel):
 
 class CardOut(BaseModel):
     id: str
+    user_id: str
+    type: CardType
+    image: str
     name: str
     issuer: str
     network: Network
-    last4: str
+    last4: str = Field(pattern=r"^[0-9]{4}$")
     reward_type: RewardType
     cpp: float = Field(description="Cents per point. 1 for cash-back cards.")
     base_rate: float
@@ -61,8 +65,24 @@ class CardOut(BaseModel):
 
 class WalletResponse(BaseModel):
     cards: list[CardOut]
-    default_debit_card_id: str
+    default_debit_card_id: str | None
     is_demo_data: Literal[True] = True
+
+
+class CardCreate(StrictRequest):
+    type: CardType
+    last4: str = Field(pattern=r"^[0-9]{4}$")
+
+
+class CardUpdate(StrictRequest):
+    type: CardType | None = None
+    last4: str | None = Field(default=None, pattern=r"^[0-9]{4}$")
+
+    @model_validator(mode="after")
+    def require_changes(self):
+        if not self.model_fields_set or any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError("Provide type and/or last4; null is not allowed.")
+        return self
 
 
 class CouponOut(BaseModel):

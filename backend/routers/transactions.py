@@ -12,16 +12,18 @@ from errors import ApiError
 from persistence_models import DatabaseUnavailable, IdempotencyConflict
 from schemas import TransactionCreate, TransactionCreateResponse, TransactionOut
 from transaction_service import record_purchase
+from wallet_service import current_user_id
 
 router = APIRouter(prefix="/api", tags=["transactions"])
 
 
 @router.post("/transactions", response_model=TransactionCreateResponse, status_code=201)
 async def create_transaction(
-    body: TransactionCreate, response: Response, database: Database = Depends(get_db)
+    body: TransactionCreate, response: Response, database: Database = Depends(get_db),
+    user_id: str = Depends(current_user_id)
 ) -> TransactionCreateResponse:
     try:
-        transaction, duplicate = await record_purchase(database, body)
+        transaction, duplicate = await record_purchase(database, body, user_id=user_id)
     except IdempotencyConflict as exc:
         raise ApiError(409, "idempotency_conflict", str(exc)) from None
     except DatabaseUnavailable as exc:

@@ -16,7 +16,7 @@ from starlette.concurrency import run_in_threadpool
 import db
 from config import settings
 from errors import install_error_handlers
-from routers import cart, deals, missed, recommend, stack, transactions, wallet
+from routers import cards, cart, deals, missed, recommend, stack, transactions, wallet
 from schemas import HealthResponse
 
 VERSION = "0.1.0"
@@ -36,12 +36,12 @@ app = FastAPI(title="Credit Card Optimizer (demo)", version=VERSION, lifespan=li
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 install_error_handlers(app)
 
-for module in (wallet, recommend, stack, deals, transactions, missed, cart):
+for module in (cards, wallet, recommend, stack, deals, transactions, missed, cart):
     app.include_router(module.router)
 
 

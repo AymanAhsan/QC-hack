@@ -28,7 +28,8 @@ export function WalletCard({ card, width, height, evaluation, isWinner = false }
         width,
         height,
         color: card.text_color,
-        backgroundImage: `linear-gradient(135deg, ${from}, ${to})`,
+        backgroundImage: `url("${card.image}"), linear-gradient(135deg, ${from}, ${to})`,
+        backgroundSize: 'cover',
         boxShadow: isWinner
           ? `0 0 32px ${card.glow}99, 0 0 0 1px ${card.glow}66, 0 10px 32px rgba(0,0,0,0.5)`
           : '0 6px 20px rgba(0,0,0,0.45)',
@@ -70,7 +71,7 @@ export function WalletCard({ card, width, height, evaluation, isWinner = false }
       </div>
 
       {/* Masked number */}
-      <div className="relative mt-[8%] font-mono text-base tracking-[0.2em] opacity-85">•••• •••• •••• {card.last4}</div>
+      <div className="absolute bottom-5 left-5 font-mono text-base tracking-[0.15em] opacity-85" aria-label={`Card ending in ${card.last4}`}>•••• {card.last4}</div>
 
       {/* Yield badge on the winner */}
       {isWinner && evaluation?.accepted && (
@@ -78,7 +79,7 @@ export function WalletCard({ card, width, height, evaluation, isWinner = false }
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.3 }}
-          className="absolute bottom-4 right-5 rounded-full border border-emerald-400/30 bg-black/55 px-3 py-1 text-sm font-bold text-emerald-400 backdrop-blur"
+          className="absolute bottom-12 right-5 rounded-full border border-emerald-400/30 bg-black/55 px-3 py-1 text-sm font-bold text-emerald-400 backdrop-blur"
         >
           {card.reward_type === 'points' ? `${evaluation.multiplier}x · ${formatPct(evaluation.yield_pct)} yield` : `${formatPct(evaluation.yield_pct)} cash back`}
         </motion.span>

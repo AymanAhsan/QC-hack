@@ -1,17 +1,18 @@
 """GET /api/wallet and GET /api/locations. Owner: Omar."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from data import DEFAULT_DEBIT_ID, IN_STORE_LOCATION_IDS, WALLET, get_merchant, location_distance_m
+from data import Card, IN_STORE_LOCATION_IDS, get_merchant, location_distance_m
+from wallet_service import current_cards, wallet_response
 from schemas import LocationOut, LocationsResponse, WalletResponse
-from serializers import card_out, merchant_out
+from serializers import merchant_out
 
 router = APIRouter(prefix="/api", tags=["wallet"])
 
 
 @router.get("/wallet", response_model=WalletResponse)
-def get_wallet() -> WalletResponse:
-    return WalletResponse(cards=[card_out(c) for c in WALLET], default_debit_card_id=DEFAULT_DEBIT_ID)
+def get_wallet(cards: tuple[Card, ...] = Depends(current_cards)) -> WalletResponse:
+    return wallet_response(cards)
 
 
 @router.get("/locations", response_model=LocationsResponse)

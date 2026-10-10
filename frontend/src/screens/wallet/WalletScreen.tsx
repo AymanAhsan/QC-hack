@@ -20,6 +20,7 @@ import { WhyDrawer } from './WhyDrawer'
 import { PayButton } from './PayButton'
 import { Receipt, type ReceiptData } from './Receipt'
 import { StorePicker } from './StorePicker'
+import { CardManager } from './CardManager'
 import { playChime, unlockAudio, vibrateSuccess, vibrateTick } from './feedback'
 import { HANDSHAKE_MS, READ_DURATION_MS, RECEIPT_DELAY_MS } from './timing'
 
@@ -52,6 +53,7 @@ export function WalletScreen() {
   const [locations, setLocations] = useState<Location[]>([])
   const [loadError, setLoadError] = useState<unknown>(null)
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const [managerOpen, setManagerOpen] = useState(false)
 
   const [rec, setRec] = useState<RecommendResponse | null>(null)
   const [recError, setRecError] = useState<unknown>(null)
@@ -145,6 +147,8 @@ export function WalletScreen() {
 
   const leaveStore = () => {
     clearTimers()
+    recAbort.current?.abort()
+    setArriving(null)
     setRec(null)
     setReceipt(null)
     setRecError(null)
@@ -243,7 +247,7 @@ export function WalletScreen() {
   const lifted = phase === 'read' || phase === 'success' || phase === 'receipt'
   const busy = phase === 'scan' || phase === 'read' || phase === 'success'
 
-  const deckHeight = !located
+  const deckHeight = cards.length === 0 ? 0 : !located
     ? (cards.length - 1) * idleStep + cardH
     : winnerId
       ? cardH + LOSER_GAP + losers.length * LOSER_PEEK
@@ -262,6 +266,19 @@ export function WalletScreen() {
     <MotionConfig reducedMotion="user">
       <section aria-label="Wallet" className="flex min-h-full flex-col">
         <ScreenHeader title="Wallet" subtitle={<DemoBadge>Simulated payments · demo cards</DemoBadge>} />
+
+        <button type="button" disabled={busy || phase === 'receipt'} onClick={() => {
+          leaveStore()
+          setManagerOpen((open) => !open)
+        }} className="mb-4 self-start rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold disabled:opacity-50">Manage cards</button>
+
+        {managerOpen && <CardManager cards={cards} onClose={() => setManagerOpen(false)} onChange={async () => {
+          leaveStore()
+          const wallet = await api.wallet()
+          setCards(wallet.cards)
+        }} />}
+
+        {cards.length === 0 && <p className="mb-4 rounded-2xl bg-white/5 p-4 text-sm text-white/70">Your wallet is empty. Use Manage cards to add your first card.</p>}
 
         <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
           <button
