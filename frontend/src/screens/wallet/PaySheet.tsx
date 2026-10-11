@@ -6,7 +6,7 @@ import type { Card, Location, Transaction } from '../../types'
 import type { Session } from '../../session'
 import { useFrame } from '../../components/frame'
 import { Money } from '../../components/Money'
-import { CardFace, ErrorNotice, GlassButton, MerchantMark, Row, StoreBadge } from '../../components/ui'
+import { CardFace, CardLift, ErrorNotice, GlassButton, MerchantMark, Row, StoreBadge } from '../../components/ui'
 import { coinBurst } from '../../lib/coins'
 import { celebrate } from '../../lib/confetti'
 import { standing } from '../../lib/derive'
@@ -273,15 +273,18 @@ function Pile({ session, cards, cardH, onPick }: { session: Session; cards: Card
               type="button"
               onClick={() => onPick(c.id)}
               aria-label={`Pay with ${c.name} ending ${c.last4}${ev ? (ev.accepted ? (ev.value_cents ? `, earns ${money(ev.value_cents)} here` : ', earns nothing here') : ', not accepted here') : ''}`}
+              whileHover="lift"
               whileTap={{ scale: 0.985 }}
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10, transition: sink }}
               transition={slide}
               className="absolute inset-x-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
-              style={{ top: i * STRIP, height: cardH, zIndex: i, borderRadius: 16, boxShadow: '0 -6px 18px rgba(0,0,0,0.45)' }}
+              style={{ top: i * STRIP, height: cardH, zIndex: i, borderRadius: 16 }}
             >
-              <CardFace card={c} badge={ev ? <StoreBadge ev={ev} best={session.winnerCardId === c.id} /> : undefined} />
+              <CardLift>
+                <CardFace card={c} badge={ev ? <StoreBadge ev={ev} best={session.winnerCardId === c.id} /> : undefined} />
+              </CardLift>
             </motion.button>
           )
         })}

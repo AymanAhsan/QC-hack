@@ -320,6 +320,20 @@ export function CardFace({
   )
 }
 
+const lift = { lift: { y: -10, transition: { type: 'spring', duration: 0.3, bounce: 0.2 } } } as const
+
+/**
+ * Wraps a stacked card's face so it rises under the pointer. Put `whileHover="lift"` on the button around it:
+ * the button keeps its box, so the hover target never slides out from under the cursor.
+ */
+export function CardLift({ children }: { children: ReactNode }) {
+  return (
+    <motion.span variants={lift} className="relative block h-full w-full" style={{ borderRadius: 16, boxShadow: '0 -6px 18px rgba(0,0,0,0.45)' }}>
+      {children}
+    </motion.span>
+  )
+}
+
 // Microsoft Fluent Emoji 3D (MIT, github.com/microsoft/fluentui-emoji), self-hosted in public/emoji.
 // One icon set for every illustrated moment; Phosphor stays for UI glyphs.
 export type EmojiName =

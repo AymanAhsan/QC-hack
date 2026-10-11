@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { Menu } from '@base-ui/react/menu'
 import { CaretLeftIcon, DotsThreeIcon, NavigationArrowIcon, PlusIcon, XIcon } from '@phosphor-icons/react'
@@ -7,7 +7,7 @@ import { TextMorph } from 'torph/react'
 import type { Card } from '../../types'
 import type { Session } from '../../session'
 import { useFrame, useLayout } from '../../components/frame'
-import { CardFace, earnLabel, Emoji, ErrorNotice, GlassButton, LargeTitle, Loading, MerchantMark, Row, Section, StoreBadge } from '../../components/ui'
+import { CardFace, CardLift, earnLabel, Emoji, ErrorNotice, GlassButton, LargeTitle, Loading, MerchantMark, Row, Section, StoreBadge } from '../../components/ui'
 import { money, relativeDay } from '../../lib/format'
 import { HereTiles } from './HereTiles'
 import { AddCardSheet, CardDetailsSheet, ConfirmRemoveSheet, StoreSheet, WhySheet } from './sheets'
@@ -233,6 +233,27 @@ function Stack({
   onPresent: (id: string) => void
 }) {
   const height = (cards.length - 1) * STRIP + cardH
+  // The best card here rides to the top of the stack. With no store, the cards fall back to your own order.
+  // Leaving the previous best on top until the next ranking lands keeps a store change to one slide.
+  const [top, setTop] = useState<string | null>(() => (session.storeId ? session.winnerCardId : null))
+  // The cards in flight, and the one that was fully showing in front when they set off.
+  const [moving, setMoving] = useState<{ ids: string[]; front: string | null }>({ ids: [], front: null })
+  const stacked = (leadId: string | null) => {
+    const lead = cards.find((c) => c.id === leadId)
+    return lead ? [lead, ...cards.filter((c) => c !== lead)] : cards
+  }
+  const want = session.storeId ? (session.winnerCardId ?? top) : null
+  if (want !== top) {
+    const before = stacked(top)
+    setTop(want)
+    setMoving({ ids: [top, want].filter((id): id is string => id !== null), front: before[before.length - 1]?.id ?? null })
+  }
+  useEffect(() => {
+    if (!moving.ids.length) return
+    const t = setTimeout(() => setMoving({ ids: [], front: null }), 700)
+    return () => clearTimeout(t)
+  }, [moving])
+  const ordered = stacked(top)
   if (!cards.length) {
     return (
       <div className="n-panel mx-4 grid place-items-center rounded-[20px] px-6 py-12 text-center">
@@ -244,9 +265,14 @@ function Stack({
   }
   return (
     <div className="relative mx-4" style={{ height }}>
-      {cards.map((c, i) => {
+      {ordered.map((c, i) => {
         const ev = session.evaluation(c.id)
         const isBest = session.winnerCardId === c.id
+        // A card on the move rides above the others and shows only its top strip, so its body
+        // never covers the strips it passes; the clip's overscan keeps the shadow. Only the
+        // front card, whose body was showing, narrows to its strip as it goes.
+        const travelling = moving.ids.includes(c.id)
+        const narrows = travelling && moving.front === c.id
         return (
           <motion.button
             key={c.id}
@@ -255,13 +281,18 @@ function Stack({
             aria-label={`${c.name} ending ${c.last4}${ev ? (ev.accepted ? (ev.value_cents ? `, earns ${money(ev.value_cents)} here` : ', earns nothing here') : ', not accepted here') : ''}`}
             aria-pressed={selectedId !== null ? selectedId === c.id : undefined}
             onClick={() => onPresent(c.id)}
+            initial={false}
+            animate={{ clipPath: travelling ? `inset(-24px -24px ${cardH - STRIP}px -24px)` : 'inset(-24px -24px -24px -24px)' }}
+            whileHover="lift"
             whileTap={{ scale: 0.985 }}
-            transition={cardSpring}
+            transition={travelling && !narrows ? { ...cardSpring, clipPath: { duration: 0 } } : cardSpring}
             className="absolute inset-x-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
-            style={{ top: i * STRIP, height: cardH, zIndex: i, borderRadius: 16, boxShadow: '0 -6px 18px rgba(0,0,0,0.45)' }}
+            style={{ top: i * STRIP, height: cardH, zIndex: travelling ? ordered.length + i : i, borderRadius: 16 }}
           >
-            <CardFace card={c} badge={ev ? <StoreBadge ev={ev} best={isBest} /> : undefined} />
-            {selectedId === c.id ? <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[16px] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.85)]" /> : null}
+            <CardLift>
+              <CardFace card={c} badge={ev ? <StoreBadge ev={ev} best={isBest} /> : undefined} />
+              {selectedId === c.id ? <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[16px] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.85)]" /> : null}
+            </CardLift>
           </motion.button>
         )
       })}
