@@ -10,7 +10,7 @@ import { useFrame } from '../../shared/frame'
 import type { DemoSession } from '../../shared/session'
 import { HereTiles } from './HereTiles'
 import { AddCardSheet, CardDetailsSheet, ConfirmRemoveSheet, StoreSheet, WhySheet } from './sheets'
-import { CardFace, Emoji, GlassButton, LargeTitle, MerchantMark, Row, Section, StoreBadge } from './ui'
+import { CardFace, earnLabel, Emoji, GlassButton, LargeTitle, MerchantMark, Row, Section, StoreBadge } from './ui'
 
 const CARD_RATIO = 214 / 340
 const STRIP = 58
@@ -256,9 +256,8 @@ function Detail({
                   trailing={
                     <div className="tabular-nums">
                       <div className="text-[17px]">{money(t.amount_cents)}</div>
-                      <div className={`text-[13px] ${t.earned_cents ? 'text-[#30D158]' : 'text-[rgba(235,235,245,0.6)]'}`}>
-                        {t.missed_cents ? `${money(t.missed_cents)} missed` : `+${money(t.earned_cents)}`}
-                      </div>
+                      {/* What the purchase earned. What it missed lives on the Rewards tab, not in a card's history. */}
+                      <div className={`text-[13px] ${t.earned_cents ? 'text-[#30D158]' : 'text-[rgba(235,235,245,0.6)]'}`}>{earnLabel(t.earned_cents)}</div>
                     </div>
                   }
                   last={i === txs.length - 1}
