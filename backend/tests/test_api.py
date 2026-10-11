@@ -16,7 +16,7 @@ def test_wallet_and_locations():
     assert [c["id"] for c in cards][0] == "amex-gold"
     locs = client.get("/api/locations").json()["locations"]
     assert len(locs) == 10
-    assert {l["id"] for l in locs} >= {"trader-joes", "costco"}
+    assert {location["id"] for location in locs} >= {"trader-joes", "costco"}
 
 
 def test_recommend_costco():

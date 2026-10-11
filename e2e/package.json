@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node app.mjs"
+    "test": "node app.mjs",
+    "slides": "node slides.mjs"
   },
   "devDependencies": {
     "playwright": "1.63.0"

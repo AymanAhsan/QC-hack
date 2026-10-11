@@ -1,0 +1,32 @@
+{
+  "device": "PostSpark iPhone 17 Pro, Deep Blue",
+  "screen_css_pixels": [
+    402,
+    874
+  ],
+  "export_pixels": [
+    1080,
+    1350
+  ],
+  "layout": "Single phone, -10 degree tilt",
+  "background": "BUILT_IN__wallpaper-09 (user reference purple gradient)",
+  "slide_preview": "frontend/public/presentation/mockup-sample.html#6",
+  "original_deck_modified": false,
+  "checks": {
+    "screen_has_no_device_border": true,
+    "single_dynamic_island": true,
+    "full_phone_visible": true,
+    "export_inspected": true,
+    "slide_1920x1080_visually_checked": true,
+    "slide_1424x905_overflow_count": 0,
+    "slide_1424x905_broken_images": 0
+  },
+  "available_layout_count": 19,
+  "source_pixels": [
+    1206,
+    2622
+  ],
+  "source_render_scale": 3,
+  "export_file": "costco-postspark-sharp.png",
+  "export_limit": "4K and 6K require PostSpark Pro"
+}

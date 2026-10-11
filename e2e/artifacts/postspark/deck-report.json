@@ -1,0 +1,172 @@
+{
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "slides": [
+    {
+      "images": [
+        {
+          "height": 1350,
+          "loaded": true,
+          "src": "assets/cover-postspark.png",
+          "width": 1080
+        }
+      ],
+      "overflow": [],
+      "slide": "1 / 14"
+    },
+    {
+      "images": [],
+      "overflow": [],
+      "slide": "2 / 14"
+    },
+    {
+      "images": [
+        {
+          "height": 1080,
+          "loaded": true,
+          "src": "assets/overview-wallet-scan-postspark.png",
+          "width": 1440
+        },
+        {
+          "height": 1080,
+          "loaded": true,
+          "src": "assets/overview-deals-rewards-postspark.png",
+          "width": 1440
+        }
+      ],
+      "overflow": [],
+      "slide": "3 / 14"
+    },
+    {
+      "images": [
+        {
+          "height": 1350,
+          "loaded": true,
+          "src": "assets/wallet-postspark.png",
+          "width": 1080
+        }
+      ],
+      "overflow": [],
+      "slide": "4 / 14"
+    },
+    {
+      "images": [
+        {
+          "height": 1350,
+          "loaded": true,
+          "src": "assets/pay-postspark.png",
+          "width": 1080
+        }
+      ],
+      "overflow": [],
+      "slide": "5 / 14"
+    },
+    {
+      "images": [
+        {
+          "height": 1350,
+          "loaded": true,
+          "src": "assets/costco-postspark-sharp.png",
+          "width": 1080
+        }
+      ],
+      "overflow": [],
+      "slide": "6 / 14"
+    },
+    {
+      "images": [
+        {
+          "height": 1350,
+          "loaded": true,
+          "src": "assets/scan-postspark.png",
+          "width": 1080
+        }
+      ],
+      "overflow": [],
+      "slide": "7 / 14"
+    },
+    {
+      "images": [
+        {
+          "height": 1080,
+          "loaded": true,
+          "src": "assets/deals-postspark.png",
+          "width": 1080
+        }
+      ],
+      "overflow": [],
+      "slide": "8 / 14"
+    },
+    {
+      "images": [
+        {
+          "height": 1080,
+          "loaded": true,
+          "src": "assets/rewards-postspark.png",
+          "width": 1080
+        }
+      ],
+      "overflow": [],
+      "slide": "9 / 14"
+    },
+    {
+      "images": [],
+      "overflow": [],
+      "slide": "10 / 14"
+    },
+    {
+      "images": [],
+      "overflow": [],
+      "slide": "11 / 14"
+    },
+    {
+      "images": [
+        {
+          "height": 120,
+          "loaded": true,
+          "src": "../logos/trader-joes.webp",
+          "width": 120
+        },
+        {
+          "height": 120,
+          "loaded": true,
+          "src": "../logos/costco.webp",
+          "width": 120
+        },
+        {
+          "height": 120,
+          "loaded": true,
+          "src": "../logos/target.webp",
+          "width": 120
+        },
+        {
+          "height": 120,
+          "loaded": true,
+          "src": "../logos/nike.webp",
+          "width": 120
+        }
+      ],
+      "overflow": [],
+      "slide": "12 / 14"
+    },
+    {
+      "images": [],
+      "overflow": [],
+      "slide": "13 / 14"
+    },
+    {
+      "images": [
+        {
+          "height": 1080,
+          "loaded": true,
+          "src": "assets/closing-postspark.png",
+          "width": 1440
+        }
+      ],
+      "overflow": [],
+      "slide": "14 / 14"
+    }
+  ]
+}

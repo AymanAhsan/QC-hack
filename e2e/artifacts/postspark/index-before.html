@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#121316">
+<title>CreditMax Pitch</title>
+<link rel="icon" type="image/svg+xml" href="../icon.svg">
+<script>
+  // Relative asset paths need the trailing slash: /presentation -> /presentation/
+  if (/\/presentation$/.test(location.pathname)) location.replace(location.pathname + "/" + location.search + location.hash);
+</script>
+<style>
+  /* The app's graphite and system green. Green means money you get; red means a card
+     that's declined or money you missed. Nothing else is colored. */
+  :root {
+    --bg: oklch(0.185 0.007 265);
+    --text: #f5f5f7;
+    --muted: rgb(235 235 245 / 0.56);
+    --faint: rgb(235 235 245 / 0.32);
+    --rule: #2c2d32;
+    --green: #30D158;
+    --red: #FF6961;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --rounded: ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; overflow: hidden; }
+
+  .deck { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0; padding: 8vh 7vw;
+    display: flex; flex-direction: column; justify-content: center;
+    opacity: 0; visibility: hidden; transition: opacity .35s var(--ease), visibility 0s .35s;
+  }
+  .slide.active { opacity: 1; visibility: visible; transition: opacity .35s var(--ease); }
+
+  /* Type: SF Pro for words, SF Rounded for money, like the app. */
+  h1, h2 { margin: 0; font-weight: 700; letter-spacing: -0.025em; text-wrap: balance; }
+  h1 { font-size: clamp(56px, 8.4vw, 150px); line-height: .95; letter-spacing: -0.035em; }
+  h2 { font-size: clamp(40px, 4.6vw, 84px); line-height: 1.04; }
+  h2.statement { font-size: clamp(52px, 7vw, 128px); line-height: .98; letter-spacing: -0.03em; }
+  h2 .dim, h1 .dim { color: var(--muted); }
+  .label { font-size: clamp(15px, 1.15vw, 20px); font-weight: 600; color: var(--muted); margin: 0 0 2.4vh; }
+  .lead { font-size: clamp(19px, 1.65vw, 30px); line-height: 1.4; color: var(--muted); max-width: 30ch; margin: 3.4vh 0 0; text-wrap: pretty; }
+  .lead b { color: var(--text); font-weight: 600; }
+  .money { font-family: var(--rounded); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+
+  /* Text on the left, the real app on the right. */
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6vw; height: 100%; }
+  .phone { height: min(84vh, 980px); width: auto; display: block; filter: drop-shadow(0 28px 48px rgb(0 0 0 / .5)); }
+
+  /* A plain list of figures: hairlines, right-aligned tabular numbers. */
+  .rows { margin: 4.4vh 0 0; padding: 0; list-style: none; max-width: 34vw; font-size: clamp(16px, 1.3vw, 23px); }
+  .rows li { display: flex; align-items: baseline; gap: 1.2vw; padding: 1.5vh 0; border-top: 1px solid var(--rule); }
+  .rows li:last-child { border-bottom: 1px solid var(--rule); }
+  .rows .what { flex: 1; color: var(--muted); }
+  .rows .what b { color: var(--text); font-weight: 600; }
+  .rows .num { font-family: var(--rounded); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* Numbered steps */
+  .steps { margin: 4.4vh 0 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 2.6vh; max-width: 36vw; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 2.2em 1fr; font-size: clamp(17px, 1.4vw, 25px); line-height: 1.35; color: var(--muted); }
+  .steps li::before { content: counter(s); font-family: var(--rounded); font-weight: 700; color: var(--faint); }
+  .steps b { color: var(--text); font-weight: 600; display: block; }
+  .steps.wide { max-width: 56vw; gap: 4vh; margin-top: 6vh; }
+  .steps.wide li { font-size: clamp(19px, 1.75vw, 32px); }
+
+  /* Title and closing */
+  .cover { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); align-items: center; gap: 6vw; height: 100%; }
+  .event { font-size: clamp(15px, 1.15vw, 20px); font-weight: 600; color: var(--muted); margin: 0 0 3vh; }
+  .team { margin: 6vh 0 0; font-size: clamp(16px, 1.25vw, 22px); color: var(--muted); }
+
+  /* The wallet stack: the app's card faces (CardFace in components/ui.tsx), drawn in CSS */
+  .wallet { position: relative; width: min(30vw, 470px); aspect-ratio: 1 / 1.36; justify-self: center; container-type: inline-size; }
+  .wcard { position: absolute; left: 0; right: 0; top: calc(var(--n) * 15cqw); aspect-ratio: 1.586; border-radius: 5.4cqw; overflow: hidden; color: var(--ink, #fff);
+    background: var(--art) center / cover no-repeat, linear-gradient(to top right, var(--from), var(--to));
+    box-shadow: inset 0 0 0 .5px rgb(255 255 255 / .16), 0 -4px 18px -6px rgb(0 0 0 / .5);
+    display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 5cqw; }
+  .wcard .top { align-self: stretch; display: flex; justify-content: flex-end; }
+  .wcard.venture-x .top { justify-content: flex-start; } /* keeps the badge off the Capital One logo, as in the app */
+  .wcard .earn { font-size: 4.2cqw; font-weight: 600; padding: 1.4cqw 3cqw; border-radius: 99px; background: rgb(0 0 0 / .45); color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .wcard .earn.best { background: var(--green); color: #04220e; }
+  .wcard .earn.out { color: rgb(255 255 255 / .75); }
+  .wcard .num { font-size: 4.2cqw; font-weight: 600; letter-spacing: .08em; font-variant-numeric: tabular-nums; text-shadow: var(--shadow, 0 1px 2px rgb(0 0 0 / .45)); }
+  /* The issuers' card art from the app (public/card-art, see CREDITS.md), with its fills behind it while it loads */
+  .amex-gold { --art: url(../card-art/amex-gold.webp); --from: #A08250; --to: #CFB685; --ink: #1E1709; --shadow: none; }
+  .chase-sapphire { --art: url(../card-art/chase-sapphire.webp); --from: #0B1830; --to: #22406F; }
+  .chase-freedom { --art: url(../card-art/chase-freedom.webp); --from: #1B4FA3; --to: #4285DA; }
+  .venture-x { --art: url(../card-art/venture-x.webp); --from: #131315; --to: #38383E; }
+  .apple-card { --art: url(../card-art/apple-card.webp); --from: #E2E2E6; --to: #FFFFFF; --ink: #1C1C1E; --shadow: none; }
+  .everyday-debit { --art: url(../card-art/everyday-debit.webp); --from: #082A5C; --to: #0D5BB0; }
+
+  /* Product overview: the four tabs side by side */
+  .lineup { display: flex; justify-content: space-between; gap: 2vw; margin-top: 6vh; }
+  .lineup img { height: min(56vh, 640px); width: auto; filter: drop-shadow(0 20px 36px rgb(0 0 0 / .45)); }
+
+  /* Scan: the payout is the slide */
+  .payout { font-size: clamp(96px, 11vw, 200px); line-height: .9; color: var(--green); margin: 1vh 0 0; }
+  .payout-cap { font-size: clamp(18px, 1.5vw, 27px); color: var(--muted); margin: 2vh 0 0; }
+
+  /* Pay: the app's coin shower, replayed when the slide opens */
+  .pay { position: relative; }
+  .rain { position: absolute; inset: -8vh -6vw; pointer-events: none; overflow: hidden; }
+  .rain img { position: absolute; top: -8%; width: clamp(24px, 2.4vw, 42px); opacity: 0; animation: fall var(--d) var(--delay) cubic-bezier(.3, .1, .6, 1) forwards; }
+  @keyframes fall { 10% { opacity: 1; } 85% { opacity: 1; } to { opacity: 0; transform: translateY(105vh) rotate(540deg); } }
+
+  /* Rewards: the number counts up */
+  .missed { font-size: clamp(110px, 13vw, 240px); line-height: .9; color: var(--red); margin: 2vh 0 0; }
+
+  /* Architecture: boxes and arrows */
+  .arch { display: grid; grid-template-columns: 1fr auto 1.25fr auto 1fr; align-items: center; gap: 1.6vw; margin-top: 7vh; }
+  .node { border: 1px solid var(--rule); border-radius: 20px; padding: 3vh 1.8vw; }
+  .node.core { border-color: rgb(48 209 88 / .55); }
+  .node h3 { margin: 0; font-size: clamp(19px, 1.6vw, 28px); font-weight: 700; letter-spacing: -.01em; }
+  .node p { margin: 1.2vh 0 0; font-size: clamp(14px, 1.05vw, 18px); line-height: 1.45; color: var(--muted); }
+  .node code { font-family: var(--mono); font-size: .92em; color: var(--text); }
+  .stackcol { display: grid; gap: 2vh; }
+  .arrow { width: clamp(28px, 3vw, 56px); height: 2px; background: var(--faint); position: relative; }
+  .arrow::after { content: ''; position: absolute; right: -1px; top: 50%; width: 9px; height: 9px; border: solid var(--faint); border-width: 2px 2px 0 0; transform: translateY(-50%) rotate(45deg); }
+  .formula { margin: 6vh 0 0; font-family: var(--mono); font-size: clamp(15px, 1.25vw, 22px); line-height: 1.7; color: var(--muted); white-space: pre; }
+  .formula b { color: var(--text); font-weight: 500; }
+
+  /* Live demo links */
+  .demo { margin: 0; padding: 0; list-style: none; min-width: min(36vw, 560px); font-size: clamp(17px, 1.4vw, 25px); }
+  .demo a { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1.2vw; padding: 2vh 0; border-top: 1px solid var(--rule); color: var(--text); text-decoration: none; }
+  .demo li:last-child a { border-bottom: 1px solid var(--rule); }
+  .demo a:hover .store, .demo a:focus-visible .store { text-decoration: underline; text-underline-offset: .18em; }
+  .demo img { width: 1.9em; height: 1.9em; border-radius: 24%; }
+  .demo .card { color: var(--muted); }
+
+  /* What's next: two columns of plain text */
+  .next { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5vh 5vw; margin-top: 7vh; max-width: 70vw; }
+  .next h3 { margin: 0; font-size: clamp(20px, 1.7vw, 30px); font-weight: 700; letter-spacing: -.01em; }
+  .next p { margin: 1vh 0 0; font-size: clamp(16px, 1.25vw, 22px); line-height: 1.45; color: var(--muted); max-width: 34ch; }
+
+  /* Chrome: a slide number, speaker notes on N */
+  .count { position: fixed; right: 2.4vw; bottom: 2.6vh; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--faint); z-index: 5; }
+  .notes { position: fixed; left: 50%; bottom: 4vh; transform: translateX(-50%); width: min(900px, 90vw); padding: 16px 20px; border-radius: 16px; background: #1e1f23; border: 1px solid var(--rule);
+    font-size: 15px; line-height: 1.5; color: rgb(235 235 245 / .82); display: none; z-index: 6; }
+  .notes.show { display: block; }
+
+  @media (max-width: 800px) {
+    html, body { overflow: auto; }
+    .slide { padding: 6vh 16px 10vh; justify-content: flex-start; overflow-y: auto; }
+    .split, .cover { grid-template-columns: 1fr; height: auto; gap: 5vh; }
+    .phone { height: 64vh; justify-self: center; }
+    .wallet { width: 80vw; }
+    .rows, .steps, .steps.wide { max-width: none; }
+    .lineup { flex-wrap: wrap; justify-content: center; }
+    .lineup img { height: 44vh; }
+    .arch { grid-template-columns: 1fr; }
+    .arrow { justify-self: center; transform: rotate(90deg); }
+    .next { grid-template-columns: 1fr; max-width: none; }
+    .demo { min-width: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slide, .slide.active { transition: none; }
+    .rain { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- 1. Title -->
+  <section class="slide" data-notes="One sentence: CreditMax tells you which card to use for every purchase, stacks a coupon on top, and shows what the wrong card has cost you. Optional aside: forget looksmaxxing, this is creditmaxxing.">
+    <div class="cover">
+      <div>
+        <p class="event">QC Hacknight 2026</p>
+        <h1>CreditMax</h1>
+        <p class="lead">The right card for every purchase, the best coupon on top, and a running total of what the wrong card cost you.</p>
+        <p class="team">Omar, Mohammad, Ayman, Nazeef</p>
+      </div>
+      <div class="wallet" role="img" aria-label="Wallet at Trader Joe's: Amex Gold earns the most">
+        <div class="wcard amex-gold" style="--n:0"><div class="top"><span class="earn best">+$3.06</span></div><span class="num">•••• 4821</span></div>
+        <div class="wcard chase-sapphire" style="--n:1"><div class="top"><span class="earn">+$0.64</span></div><span class="num">•••• 7734</span></div>
+        <div class="wcard chase-freedom" style="--n:2"><div class="top"><span class="earn">+$0.43</span></div><span class="num">•••• 3310</span></div>
+        <div class="wcard venture-x" style="--n:3"><div class="top"><span class="earn">+$1.19</span></div><span class="num">•••• 5508</span></div>
+        <div class="wcard apple-card" style="--n:4"><div class="top"><span class="earn">+$0.85</span></div><span class="num">•••• 9012</span></div>
+        <div class="wcard everyday-debit" style="--n:5"><div class="top"><span class="earn out">No rewards</span></div><span class="num">•••• 0042</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Problem -->
+  <section class="slide" data-notes="Most people carry several reward cards and default to one. The value is real, but the decision happens at the register in two seconds.">
+    <h2 class="statement">You carry five cards.<br><span class="dim">You use the wrong one.</span></h2>
+    <p class="lead" style="max-width:44ch;margin-top:5vh">4x points at 1.8¢, 2x at 1.4¢, 5% in one category, Visa only at Costco. Nobody does that math in the two seconds at the register, so the debit card comes out.</p>
+  </section>
+
+  <!-- 3. Product -->
+  <section class="slide" data-notes="Four tabs plus Pay, one engine behind all of them. Picking the right card pays out coins, confetti, and a streak.">
+    <h2>One app picks the card,<br>stacks the coupon, <span class="dim">and keeps score.</span></h2>
+    <div class="lineup">
+      <img src="assets/wallet.png" alt="Wallet: every card shows what it earns at Trader Joe's">
+      <img src="assets/scan.png" alt="Scan: a Nike cart with SAVE15 and Apple Card, $17.55 back">
+      <img src="assets/deals.png" alt="Deals: today's best clothing stacks">
+      <img src="assets/rewards.png" alt="Rewards: 31% captured, $69.75 left on the table">
+    </div>
+  </section>
+
+  <!-- 4. Wallet -->
+  <section class="slide" data-notes="Open the Trader Joe's link. I didn't tap anything: it matched my location to the store and ranked my cards. Amex Gold, +$3.06, in green. Tap the card, then 'At Trader Joe's' for the why sheet.">
+    <div class="split">
+      <div>
+        <p class="label">Wallet</p>
+        <h2>It already knows<br>which card to pull.</h2>
+        <p class="lead">Walk into Trader Joe’s with a $42.50 basket. Every card shows what it earns there, and the best one is on top.</p>
+        <ul class="rows">
+          <li><span class="what">Amex accepted</span></li>
+          <li><span class="what">Coded as grocery, MCC 5411</span></li>
+          <li><span class="what"><b>4x points × 1.8¢ = 7.2% back</b></span><span class="num green">+$3.06</span></li>
+        </ul>
+      </div>
+      <img class="phone" src="assets/wallet.png" alt="Wallet at Trader Joe's: Amex Gold on top with +$3.06">
+    </div>
+  </section>
+
+  <!-- 5. Pay -->
+  <section class="slide" data-notes="Tap Pay, or double-click the side button in the preview. The best card is already on top. Hold the circle about a second: the ring fills, check, chime, coins, +$3.06 back. Letting go early cancels. Pay closes itself. It's a simulation: no NFC, nothing is charged.">
+    <div class="split">
+      <div>
+        <p class="label">Pay</p>
+        <h2>Hold to pay.<br><span class="dim">Get paid back.</span></h2>
+        <p class="lead">Pay opens with the best card on top. Hold the button for a second: a check, a chime, and a shower of coins worth <b class="green">$3.06</b>.</p>
+      </div>
+      <div class="pay">
+        <img class="phone" src="assets/paid.png" alt="Pay after paying: Amex Gold, +$3.06 back, Done">
+        <div class="rain" id="rain"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Costco -->
+  <section class="slide" data-notes="Costco only takes Visa. The engine checks acceptance before it ranks anything, so it never recommends a card that would be declined. Chase Freedom wins with 5% on warehouse clubs.">
+    <div class="split">
+      <div>
+        <p class="label">Costco, $187.40</p>
+        <h2>The top card<br><span class="dim">isn’t always accepted.</span></h2>
+        <ol class="steps">
+          <li><span><b>Network</b>Costco takes Visa only, so <span class="red">Amex and Mastercard are out</span>.</span></li>
+          <li><span><b>Category</b>It’s coded as a wholesale club, MCC 5300, not a grocery store.</span></li>
+          <li><span><b>Yield</b>Chase Freedom pays 5% on wholesale clubs: <span class="green money">$9.37</span>.</span></li>
+        </ol>
+      </div>
+      <img class="phone" src="assets/costco.png" alt="Wallet at Costco: Amex Gold and Apple Card not accepted, Chase Freedom +$9.37">
+    </div>
+  </section>
+
+  <!-- 7. Scan -->
+  <section class="slide" data-notes="Try the sample cart. SAVE15 takes $15 off, Apple Card earns 3% on the remaining $85, $17.55 back in total. Then log it with Everyday Debit: 'Logged, $2.55 missed'. Tap See Rewards.">
+    <div class="split">
+      <div>
+        <p class="label">Scan</p>
+        <h2>Screenshot your cart.</h2>
+        <p class="payout money">$17.55</p>
+        <p class="payout-cap">back on a $100 Nike order</p>
+        <ul class="rows">
+          <li><span class="what"><b>SAVE15</b>, 15% off orders over $50</span><span class="num green">−$15.00</span></li>
+          <li><span class="what"><b>Apple Card</b>, 3% at Nike on $85.00</span><span class="num green">+$2.55</span></li>
+        </ul>
+      </div>
+      <img class="phone" src="assets/scan.png" alt="Scan: Nike sample cart, $17.55 back with SAVE15 and Apple Card">
+    </div>
+  </section>
+
+  <!-- 8. Deals -->
+  <section class="slide" data-notes="Open Deals and flip through Meals, Clothing, and Travel. Tap one, then Open in Scan for the full breakdown.">
+    <div class="split">
+      <div>
+        <p class="label">Deals</p>
+        <h2>The best stacks,<br><span class="dim">found for you.</span></h2>
+        <p class="lead">Meals, clothing, and travel, ranked by dollars back on a typical order with the cards already in your wallet.</p>
+        <ul class="rows">
+          <li><span class="what"><b>H&amp;M</b>, HM20 + Venture X</span><span class="num green">$13.34</span></li>
+          <li><span class="what"><b>Lululemon</b>, LULU20 + Venture X</span><span class="num green">$23.02</span></li>
+          <li><span class="what"><b>Nike</b>, SAVE15 + Apple Card</span><span class="num green">$17.55</span></li>
+        </ul>
+      </div>
+      <img class="phone" src="assets/deals.png" alt="Deals: clothing stacks for H&amp;M, Lululemon, Nike, and Uniqlo">
+    </div>
+  </section>
+
+  <!-- 9. Rewards -->
+  <section class="slide" data-notes="The emotional hook. Fresh seed: $69.75 left on the table across 30 purchases, $30.80 earned of $100.55 possible. Same purchases, same wallet. The only difference is which card came out.">
+    <div class="split">
+      <div>
+        <p class="label">Rewards, last 30 days</p>
+        <h2>In 30 purchases, you left</h2>
+        <p class="missed money" id="missed">$69.75</p>
+        <p class="lead">on the table. You earned $30.80 of a possible $100.55. Same purchases, same wallet; only the card was different.</p>
+      </div>
+      <img class="phone" src="assets/rewards.png" alt="Rewards: 31% captured, $30.80 earned, $69.75 left on the table">
+    </div>
+  </section>
+
+  <!-- 10. The game -->
+  <section class="slide" data-notes="Picking the right card is a game. Every best-card purchase pays out coins and confetti and grows your streak; at 3, 5, and 10 in a row you get a bigger burst and a fanfare. Rewards names the one change worth the most money.">
+    <h2>Saving money should<br><span class="dim">feel like winning.</span></h2>
+    <ol class="steps wide">
+      <li><span><b>Coins on every best-card payment</b>Pay with the card we pick and the screen rains coins and confetti.</span></li>
+      <li><span><b>A streak that counts</b>3, 5, and 10 best-card picks in a row get a bigger burst and a fanfare.</span></li>
+      <li><span><b>One fix, worth the most</b>"Use Amex Gold for groceries: $15.53 missed there in 30 days."</span></li>
+    </ol>
+  </section>
+
+  <!-- 11. How it works -->
+  <section class="slide" data-notes="The phone only talks to /api. FastAPI hands every request to one pure rewards engine, calls Gemini only for screenshots and unknown stores, and writes purchases to Tiger Data. If Gemini or the database can't be reached, offline fallbacks keep the demo running.">
+    <h2>One rewards engine<br><span class="dim">behind every screen.</span></h2>
+    <div class="arch">
+      <div class="node"><h3>React PWA</h3><p>React 19, TypeScript, Tailwind, Motion. Installs to the home screen.</p></div>
+      <span class="arrow" aria-hidden="true"></span>
+      <div class="node core"><h3>FastAPI</h3><p><code>engine.py</code>: network filter, MCC category, yield ranking, coupon stacking, missed cash back. Pure functions, tested with pytest.</p></div>
+      <span class="arrow" aria-hidden="true"></span>
+      <div class="stackcol">
+        <div class="node"><h3>Gemini 2.5 Flash</h3><p>Reads cart screenshots.</p></div>
+        <div class="node"><h3>Tiger Data</h3><p>Postgres and TimescaleDB, every purchase.</p></div>
+      </div>
+    </div>
+    <p class="formula">yield  = <b>multiplier × ¢ per point</b><br>missed = <b>best card − card used</b></p>
+  </section>
+
+  <!-- 12. Live demo -->
+  <section class="slide" data-notes="Switch to the app. These links open it in an iPhone frame; double-click the side button to open Pay. Script: Trader Joe's, hold to pay, coins. Costco. Scan the sample cart and log it with debit. Rewards, now $72.30. Deals. On a real phone, drop 'preview&' from the URL.">
+    <div class="split">
+      <div>
+        <h2>Let’s go shopping.</h2>
+        <p class="lead">Trader Joe’s, then Costco, then a Nike cart logged with the wrong card. Watch the total climb to <span class="money red">$72.30</span>.</p>
+      </div>
+      <ul class="demo">
+        <li><a href="/?preview&amp;geo=40.73342,-73.98788" target="_blank"><img src="../logos/trader-joes.webp" alt=""><span class="store">Trader Joe’s</span><span class="card">Amex Gold</span></a></li>
+        <li><a href="/?preview&amp;geo=40.79564,-73.93088" target="_blank"><img src="../logos/costco.webp" alt=""><span class="store">Costco</span><span class="card">Chase Freedom</span></a></li>
+        <li><a href="/?preview&amp;geo=40.71453,-74.01127" target="_blank"><img src="../logos/target.webp" alt=""><span class="store">Target</span><span class="card">Venture X</span></a></li>
+        <li><a href="/?preview&amp;geo=40.75974,-73.97678" target="_blank"><img src="../logos/nike.webp" alt=""><span class="store">Nike</span><span class="card">Apple Card</span></a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 13. Next -->
+  <section class="slide" data-notes="Be straight about scope: cards, stores, and coupons are demo data. Then the path to a real product.">
+    <h2>What’s next</h2>
+    <div class="next">
+      <div><h3>Real card linking</h3><p>Pull your actual cards and reward rates through account aggregation.</p></div>
+      <div><h3>Any store</h3><p>Real merchant and MCC lookup, beyond our ten stores in New York.</p></div>
+      <div><h3>Verified offers</h3><p>Live coupon and card-linked offer feeds.</p></div>
+      <div><h3>Challenges</h3><p>Weekly goals and leaderboards with friends, on top of the streak.</p></div>
+    </div>
+  </section>
+
+  <!-- 14. Thanks -->
+  <section class="slide" data-notes="Thank the judges, invite questions.">
+    <div class="cover">
+      <div>
+        <h1>Stop leaving money <span class="dim">at the register.</span></h1>
+        <p class="team">CreditMax · Omar, Mohammad, Ayman, Nazeef</p>
+        <p class="lead" style="margin-top:2vh">Questions?</p>
+      </div>
+      <div class="wallet" role="img" aria-label="Wallet at Costco: Chase Freedom earns the most; Amex Gold and Apple Card are not accepted">
+        <div class="wcard amex-gold" style="--n:0"><div class="top"><span class="earn out">Not accepted</span></div><span class="num">•••• 4821</span></div>
+        <div class="wcard chase-sapphire" style="--n:1"><div class="top"><span class="earn">+$2.81</span></div><span class="num">•••• 7734</span></div>
+        <div class="wcard venture-x" style="--n:2"><div class="top"><span class="earn">+$5.25</span></div><span class="num">•••• 5508</span></div>
+        <div class="wcard apple-card" style="--n:3"><div class="top"><span class="earn out">Not accepted</span></div><span class="num">•••• 9012</span></div>
+        <div class="wcard everyday-debit" style="--n:4"><div class="top"><span class="earn out">No rewards</span></div><span class="num">•••• 0042</span></div>
+        <div class="wcard chase-freedom" style="--n:5"><div class="top"><span class="earn best">+$9.37</span></div><span class="num">•••• 3310</span></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="count" id="count" aria-live="polite"></div>
+<div class="notes" id="notes"></div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const count = document.getElementById('count');
+  const notes = document.getElementById('notes');
+  const still = matchMedia('(prefers-reduced-motion: reduce)');
+  let i = 0;
+
+  function fromHash() {
+    const n = parseInt(location.hash.slice(1), 10);
+    return Number.isFinite(n) ? Math.min(Math.max(n - 1, 0), slides.length - 1) : 0;
+  }
+
+  function show(n) {
+    i = Math.min(Math.max(n, 0), slides.length - 1);
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    count.textContent = (i + 1) + ' / ' + slides.length;
+    notes.textContent = slides[i].dataset.notes || '';
+    history.replaceState(null, '', '#' + (i + 1));
+    if (slides[i].querySelector('#missed')) countUp();
+    if (slides[i].querySelector('#rain')) coinRain();
+  }
+
+  // The app's coin shower, replayed each time the Pay slide opens.
+  function coinRain() {
+    const rain = document.getElementById('rain');
+    rain.replaceChildren();
+    if (still.matches) return;
+    for (let k = 0; k < 16; k++) {
+      const c = document.createElement('img');
+      c.src = '../emoji/coin.png';
+      c.alt = '';
+      c.style.left = (Math.random() * 92) + '%';
+      c.style.setProperty('--delay', (0.3 + Math.random() * 0.7).toFixed(2) + 's');
+      c.style.setProperty('--d', (1.8 + Math.random() * 1.2).toFixed(2) + 's');
+      rain.appendChild(c);
+    }
+  }
+
+  function countUp() {
+    const el = document.getElementById('missed');
+    const target = 69.75;
+    if (still.matches) { el.textContent = '$' + target.toFixed(2); return; }
+    const t0 = performance.now(), dur = 1400;
+    (function step(t) {
+      const p = Math.min((t - t0) / dur, 1);
+      el.textContent = '$' + (target * (1 - Math.pow(1 - p, 3))).toFixed(2);
+      if (p < 1 && slides[i].contains(el)) requestAnimationFrame(step);
+    })(t0);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(i + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'n') notes.classList.toggle('show');
+    else if (e.key.toLowerCase() === 'f') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  document.getElementById('deck').addEventListener('click', (e) => {
+    if (e.target.closest('a')) return;
+    show(e.clientX > innerWidth / 3 ? i + 1 : i - 1);
+  });
+
+  let tx = null;
+  addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchend', (e) => {
+    if (tx === null) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) show(dx < 0 ? i + 1 : i - 1);
+    tx = null;
+  });
+
+  show(fromHash());
+</script>
+</body>
+</html>
