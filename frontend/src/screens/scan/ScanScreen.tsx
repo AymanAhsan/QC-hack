@@ -127,8 +127,10 @@ export function ScanScreen() {
         )}
 
         {result && (
-          <div className="space-y-3">
+          // Desktop: the stack on the left, "which card did you use?" beside it.
+          <div className="space-y-3 lg:grid lg:grid-cols-[1.2fr_1fr] lg:items-start lg:gap-8 lg:space-y-0">
             <StackResult stack={result.stack} parse={result.parse} cards={cards} />
+            <div className="space-y-3 lg:sticky lg:top-6">
             <Reveal order={3}>
               <CardUsedPicker key={result.id} stack={result.stack} cards={cards} />
             </Reveal>
@@ -139,6 +141,7 @@ export function ScanScreen() {
             >
               Scan another cart
             </button>
+            </div>
           </div>
         )}
       </section>

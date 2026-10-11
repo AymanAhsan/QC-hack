@@ -1,0 +1,184 @@
+{
+ "card": {
+  "id": "amex-gold",
+  "user_id": "demo",
+  "type": "amex-gold",
+  "image": "/cards/amex-gold.svg",
+  "name": "Amex Gold",
+  "issuer": "American Express",
+  "network": "amex",
+  "last4": "4821",
+  "reward_type": "points",
+  "cpp": 1.8,
+  "base_rate": 1.0,
+  "category_rates": {
+   "dining": 4.0,
+   "grocery": 4.0,
+   "airfare": 3.0
+  },
+  "merchant_rates": {},
+  "gradient": [
+   "#d4af37",
+   "#8a6d1d"
+  ],
+  "glow": "#f5c84c",
+  "text_color": "#1a1405",
+  "is_default_debit": false
+ },
+ "valuation_label": "Points worth 1.8¢ each",
+ "benefits": [
+  {
+   "kind": "category",
+   "key": "dining",
+   "label": "Dining",
+   "emoji": null,
+   "multiplier": 4.0,
+   "yield_pct": 7.2,
+   "rate_label": "4x points",
+   "applies_to": [
+    "Chipotle",
+    "Sweetgreen",
+    "Starbucks",
+    "UberEats",
+    "DoorDash"
+   ]
+  },
+  {
+   "kind": "category",
+   "key": "grocery",
+   "label": "Grocery",
+   "emoji": null,
+   "multiplier": 4.0,
+   "yield_pct": 7.2,
+   "rate_label": "4x points",
+   "applies_to": [
+    "Trader Joe's",
+    "Whole Foods"
+   ]
+  },
+  {
+   "kind": "category",
+   "key": "airfare",
+   "label": "Airfare",
+   "emoji": null,
+   "multiplier": 3.0,
+   "yield_pct": 5.4,
+   "rate_label": "3x points",
+   "applies_to": [
+    "Delta"
+   ]
+  },
+  {
+   "kind": "base",
+   "key": "base",
+   "label": "Everything else",
+   "emoji": null,
+   "multiplier": 1.0,
+   "yield_pct": 1.8,
+   "rate_label": "1x points",
+   "applies_to": []
+  }
+ ],
+ "best_at": [
+  {
+   "merchant_id": "trader-joes",
+   "merchant_name": "Trader Joe's",
+   "emoji": "🛒",
+   "yield_pct": 7.2,
+   "accepts": [
+    "visa",
+    "mastercard",
+    "amex"
+   ]
+  },
+  {
+   "merchant_id": "whole-foods",
+   "merchant_name": "Whole Foods",
+   "emoji": "🥑",
+   "yield_pct": 7.2,
+   "accepts": [
+    "visa",
+    "mastercard",
+    "amex"
+   ]
+  },
+  {
+   "merchant_id": "chipotle",
+   "merchant_name": "Chipotle",
+   "emoji": "🌯",
+   "yield_pct": 7.2,
+   "accepts": [
+    "visa",
+    "mastercard",
+    "amex"
+   ]
+  },
+  {
+   "merchant_id": "sweetgreen",
+   "merchant_name": "Sweetgreen",
+   "emoji": "🥗",
+   "yield_pct": 7.2,
+   "accepts": [
+    "visa",
+    "mastercard",
+    "amex"
+   ]
+  },
+  {
+   "merchant_id": "starbucks",
+   "merchant_name": "Starbucks",
+   "emoji": "☕",
+   "yield_pct": 7.2,
+   "accepts": [
+    "visa",
+    "mastercard",
+    "amex"
+   ]
+  },
+  {
+   "merchant_id": "ubereats",
+   "merchant_name": "UberEats",
+   "emoji": "🛵",
+   "yield_pct": 7.2,
+   "accepts": [
+    "visa",
+    "mastercard",
+    "amex"
+   ]
+  },
+  {
+   "merchant_id": "doordash",
+   "merchant_name": "DoorDash",
+   "emoji": "🥡",
+   "yield_pct": 7.2,
+   "accepts": [
+    "visa",
+    "mastercard",
+    "amex"
+   ]
+  },
+  {
+   "merchant_id": "delta",
+   "merchant_name": "Delta",
+   "emoji": "✈️",
+   "yield_pct": 5.4,
+   "accepts": [
+    "visa",
+    "mastercard",
+    "amex"
+   ]
+  }
+ ],
+ "not_accepted_at": [
+  {
+   "merchant_id": "costco",
+   "merchant_name": "Costco",
+   "emoji": "📦",
+   "yield_pct": null,
+   "accepts": [
+    "visa"
+   ]
+  }
+ ],
+ "is_demo_data": true
+}

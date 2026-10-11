@@ -67,6 +67,13 @@
 .missed-error button { margin-top: 14px; }
 .missed-empty p { margin-top: 10px; color: var(--missed-muted); }
 .missed-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (min-width: 1024px) {
+  .missed-body { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; gap: 40px; align-items: start; }
+  .missed-summary { position: sticky; top: 24px; }
+  .missed-details > :first-child { margin-top: 26px; }
+  .missed-stats { margin-bottom: 0; }
+  .missed-history ul { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; }
+}
 @media (max-width: 350px) {
   .missed-header { flex-wrap: wrap; }
   .missed-stats strong { font-size: 20px; }

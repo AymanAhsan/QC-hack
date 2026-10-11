@@ -1,7 +1,7 @@
 // Wallet: the in-store flow. Owner: Yousef.
 //
 //   idle ──(pick store)──► located ──(press & hold)──► scan ──600 ms──► read
-//                            ▲   ▲                       │ release        │ 1,000 ms
+//                            ▲   ▲                       │ release        │ 1,000 ms after press
 //                            │   └───────────────────────┘ cancels        ▼
 //                            └──(done)── receipt ◄──900 ms── success (chime, vibrate, POST)
 //
@@ -18,23 +18,21 @@ import { api, newIdempotencyKey } from '../../api'
 import { useStoreDetection } from '../../location'
 import { useNav } from '../../navigation'
 import type { Card, Location, RecommendResponse } from '../../types'
-import { formatCents } from '../../lib/format'
+import { formatCents, parseDollarsToCents } from '../../lib/format'
 import { DemoBadge, ErrorNotice, Loading, ScreenHeader } from '../../components/ui'
 import { WalletCard } from './WalletCard'
 import { WhyDrawer } from './WhyDrawer'
 import { PayButton } from './PayButton'
 import { Receipt, type ReceiptData } from './Receipt'
 import { StorePicker } from './StorePicker'
+import { CardBenefitsSheet } from './CardBenefitsSheet'
 import { DetectionNotice } from './DetectionNotice'
 import { CardManager } from './CardManager'
 import { playChime, unlockAudio, vibrateSuccess, vibrateTick } from './feedback'
+import { HANDSHAKE_MS, READ_DURATION_MS, RECEIPT_DELAY_MS } from './timing'
 
 export type PayPhase = 'idle' | 'located' | 'scan' | 'read' | 'success' | 'receipt'
 
-// Beat timings (PROJECT.md, Interaction 3)
-const HANDSHAKE_MS = 600
-const READ_MS = 1000
-const RECEIPT_DELAY_MS = 900
 
 // Deck geometry. Card size follows the available width, capped at 340 px.
 const MAX_CARD_W = 340
@@ -73,8 +71,11 @@ export function WalletScreen() {
   // Metres from the store when the lifted store was auto-detected; null for a manual pick.
   const [detectedDistanceM, setDetectedDistanceM] = useState<number | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [benefitsCard, setBenefitsCard] = useState<Card | null>(null)
+  const closeBenefits = useCallback(() => setBenefitsCard(null), [])
   const [phase, setPhaseState] = useState<PayPhase>('idle')
   const [receipt, setReceipt] = useState<ReceiptData | null>(null)
+  const [amountText, setAmountText] = useState('')
 
   // Timer callbacks read the live phase from here, not from a stale closure.
   const phaseRef = useRef<PayPhase>('idle')
@@ -121,8 +122,11 @@ export function WalletScreen() {
 
   // ── Location ──────────────────────────────────────────────────────
 
-  /** `detectedM` is the measured distance when the store came from the location check. */
-  const arriveAt = (loc: Location, detectedM: number | null = null) => {
+  /**
+   * `detectedM` is the measured distance when the store came from the location check.
+   * `amountCents` is a typed checkout total; omitted, the store's typical spend is used.
+   */
+  const arriveAt = (loc: Location, detectedM: number | null = null, amountCents?: number) => {
     setPickerOpen(false)
     clearTimers()
     recAbort.current?.abort()
@@ -130,9 +134,10 @@ export function WalletScreen() {
     recAbort.current = ctrl
     setArriving(loc)
     setRecError(null)
-    api.recommend(loc.id, undefined, ctrl.signal).then(
+    api.recommend(loc.id, amountCents, ctrl.signal).then(
       (r) => {
         setRec(r)
+        setAmountText((r.amount_cents / 100).toFixed(2))
         setReceipt(null)
         setPhase('located')
         setArriving(null)
@@ -144,6 +149,19 @@ export function WalletScreen() {
         setArriving(null)
       },
     )
+  }
+
+  // Mock purchase amount: re-rank the wallet for the typed checkout total.
+  const commitAmount = () => {
+    if (!rec) return
+    const cents = parseDollarsToCents(amountText)
+    if (cents === null || cents > 10_000_000) {
+      setAmountText((rec.amount_cents / 100).toFixed(2))
+      return
+    }
+    if (cents === rec.amount_cents) return
+    const loc = locations.find((l) => l.id === rec.merchant.id)
+    if (loc) arriveAt(loc, detectedDistanceM, cents)
   }
 
   const leaveStore = () => {
@@ -225,7 +243,7 @@ export function WalletScreen() {
         purchase.current = { key: newIdempotencyKey(), rec: r }
         void save(purchase.current.key, r)
         later(() => phaseRef.current === 'success' && setPhase('receipt'), RECEIPT_DELAY_MS)
-      }, READ_MS)
+      }, READ_DURATION_MS)
     }, HANDSHAKE_MS)
   }
 
@@ -260,6 +278,7 @@ export function WalletScreen() {
   const losers = located ? rec.ranking.filter((e) => e.card_id !== winnerId) : []
   const lifted = phase === 'read' || phase === 'success' || phase === 'receipt'
   const busy = phase === 'scan' || phase === 'read' || phase === 'success'
+  const showWhy = located && rec.why !== null
 
   const deckHeight = cards.length === 0 ? 0 : !located
     ? (cards.length - 1) * idleStep + cardH
@@ -319,9 +338,22 @@ export function WalletScreen() {
             <span aria-hidden="true" className="text-[10px] opacity-60">▾</span>
           </button>
           {located && (
-            <span className="text-[13px] text-white/50">
-              Checkout <strong className="font-semibold text-white">{formatCents(rec.amount_cents)}</strong>
-            </span>
+            <label className="inline-flex items-center gap-1.5 text-[13px] text-white/50">
+              Checkout
+              <span className="inline-flex items-center rounded-lg bg-white/[0.08] px-2 py-1 focus-within:ring-1 focus-within:ring-sky-400">
+                <span aria-hidden="true" className="font-semibold text-white">$</span>
+                <input
+                  aria-label={`Purchase amount in dollars (currently ${formatCents(rec.amount_cents)})`}
+                  inputMode="decimal"
+                  value={amountText}
+                  disabled={busy || phase === 'receipt' || arriving !== null}
+                  onChange={(e) => setAmountText(e.target.value)}
+                  onBlur={commitAmount}
+                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                  className="w-[4.5rem] bg-transparent font-semibold text-white outline-none disabled:opacity-60"
+                />
+              </span>
+            </label>
           )}
         </div>
 
@@ -339,7 +371,13 @@ export function WalletScreen() {
           </p>
         )}
 
-        <div ref={deckRef} className="flex w-full justify-center">
+        {cards.length > 0 && !busy && phase !== 'receipt' && (
+          <p className="mb-2 text-center text-xs text-white/35">Tap a card to see its benefits</p>
+        )}
+
+        {/* Phone: deck, why drawer, sticky pay bar. Desktop: deck + pay on the left, why drawer on the right. */}
+        <div className="flex flex-1 flex-col lg:grid lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10">
+        <div ref={deckRef} className={`flex w-full justify-center lg:row-start-1 ${showWhy ? 'lg:col-start-1' : 'lg:col-span-2'}`}>
           <motion.div
             className="relative shrink-0 [clip-path:inset(-60px_-60px_0_-60px)]"
             style={{ width: cardW }}
@@ -359,6 +397,14 @@ export function WalletScreen() {
                   transition={isWinner && lifted ? { type: 'spring', stiffness: 500, damping: 14 } : { ...SPRING, delay: located ? 0 : idx * 0.03 }}
                 >
                   <WalletCard card={card} width={cardW} height={cardH} evaluation={located ? evalById.get(card.id) : undefined} isWinner={isWinner} />
+                  {/* Whole-card tap target; on a stacked card only its visible strip is reachable. */}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setBenefitsCard(card)}
+                    aria-label={`${card.name} benefits`}
+                    className="absolute inset-0 cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400 disabled:cursor-default"
+                  />
                   {isWinner && phase === 'scan' && (
                     // Proximity radar: concentric cyan rings from the card's top edge
                     <span aria-hidden="true" className="pointer-events-none absolute left-1/2 top-0 z-10">
@@ -380,14 +426,14 @@ export function WalletScreen() {
           </motion.div>
         </div>
 
-        {located && rec.why && (
-          <div className="mt-4">
+        {showWhy && (
+          <div className="mt-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">
             <WhyDrawer rec={rec} />
           </div>
         )}
 
         {/* Pay bar stays reachable at the bottom of the scroll area */}
-        <div className="sticky bottom-0 z-30 -mx-4 mt-auto flex flex-col items-center bg-gradient-to-b from-transparent to-black to-[28px] px-4 pb-2 pt-5">
+        <div className={`sticky bottom-0 z-30 -mx-4 mt-auto flex flex-col items-center bg-gradient-to-b from-transparent to-black to-[28px] px-4 pb-2 pt-5 lg:static lg:row-start-2 lg:mx-0 lg:bg-none lg:pt-8 ${showWhy ? 'lg:col-start-1' : 'lg:col-span-2'}`}>
           <PayButton phase={phase} disabled={!located || !winnerId || phase === 'receipt'} onHoldStart={holdStart} onHoldEnd={holdEnd} />
           {located && !busy && (
             <button type="button" onClick={leaveStore} className="mt-1 text-[13px] text-white/40 hover:text-white/60">
@@ -395,7 +441,9 @@ export function WalletScreen() {
             </button>
           )}
         </div>
+        </div>
 
+        <CardBenefitsSheet card={benefitsCard} onClose={closeBenefits} />
         <StorePicker open={pickerOpen} locations={locations} currentId={located ? rec.merchant.id : null} onPick={arriveAt} onClose={() => setPickerOpen(false)} />
         <Receipt
           data={phase === 'receipt' ? receipt : null}

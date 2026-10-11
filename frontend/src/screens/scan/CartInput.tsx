@@ -32,7 +32,7 @@ export function CartInput({ onUpload, onSample, onManual }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8 lg:space-y-0">
       <div className="space-y-3">
         <label className="flex cursor-pointer flex-col items-center gap-3 rounded-3xl border border-dashed border-white/20 bg-white/[0.03] px-6 py-10 text-center transition-colors focus-within:outline-2 focus-within:outline-sky-400 hover:border-white/35 hover:bg-white/[0.06]">
           <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={pick} />
