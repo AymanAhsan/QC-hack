@@ -281,3 +281,9 @@ Releasing before 1,000 ms cancels back to `located`.
 5. Switch to **Scan**, upload a cart screenshot: coupon, card, and total stack reveal.
 6. Type a store that is not in the dictionary: Gemini produces a coupon.
 7. Finish on **Deals**: today's stacks across Meals, Clothing, Travel.
+
+
+
+
+
+Larp
