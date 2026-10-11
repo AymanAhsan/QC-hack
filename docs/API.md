@@ -116,7 +116,9 @@ six planned cards are seeded once. Deleting a demo card survives restart.
 IDs are generated UUIDs for added cards. Multiple cards of the same type are allowed.
 The server derives names, networks, rewards, colors, and `image` from the selected
 type. Artwork is served by the frontend at `/cards/{type}.svg`; the card component
-overlays the masked last four digits at the bottom left. No full card numbers,
+overlays the masked last four digits at the bottom left. The Add card sheet asks
+for the full number, cardholder name, expiration date, and 3-digit security code,
+but only `type` and the last four digits are sent. No full card numbers, names,
 expiration dates, or security codes are accepted or stored.
 
 Unknown fields, unsupported types, malformed digits, empty PATCH bodies, and

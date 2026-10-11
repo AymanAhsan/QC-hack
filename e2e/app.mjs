@@ -270,7 +270,10 @@ async function phone(page, gemini) {
   await check(page, 'Adding a card saves it, and removing it deletes it', async () => {
     await page.getByRole('button', { name: 'Add card' }).click()
     await dialog.getByRole('button', { name: /^Apple Card/ }).click()
-    await dialog.getByLabel('Last four digits').fill('0007')
+    await dialog.getByLabel('Card number').fill('4111111111110007')
+    await dialog.getByLabel('Cardholder name').fill('Ada Lovelace')
+    await dialog.getByLabel('Expiration date').fill('1229')
+    await dialog.getByLabel('Security code').fill('123')
     await screenshot(page, '09-add-card', { full: false })
     await dialog.getByRole('button', { name: 'Add card' }).click()
     await dialog.waitFor({ state: 'hidden' })
