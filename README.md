@@ -152,6 +152,3 @@ Secrets live only in `backend/.env`, which is git-ignored.
 | Gemini, Scan, Deals | Nazeef | `backend/gemini.py`, `backend/routers/cart.py`, `frontend/src/screens/{scan,deals}/` |
 
 Shared contract changes (API fields, `types.ts`, dependencies) go through a PR that updates `docs/API.md`, `backend/schemas.py`, and `frontend/src/types.ts` together.
-
-jewjewpkjfljds
-dsfdsfds
