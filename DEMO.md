@@ -1,6 +1,6 @@
 # Demo guide
 
-How to show CardMax end to end in about three minutes without anything going wrong. For setup details see [README.md](README.md); for the product story see [PROJECT.md](PROJECT.md).
+How to show CreditMaxx end to end in about three minutes without anything going wrong. For setup details see [README.md](README.md); for the product story see [PROJECT.md](PROJECT.md).
 
 Everything is simulated. Say so once, early: "cards, stores, coupons, and payments are demo data; nothing is charged."
 
