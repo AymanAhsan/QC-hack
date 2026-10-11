@@ -60,7 +60,7 @@ export const CARD_TEMPLATES: (CardLook & { issuer: string })[] = (
     ['chase-freedom', 'Chase Freedom', 'Chase', 'visa'],
     ['venture-x', 'Venture X', 'Capital One', 'visa'],
     ['apple-card', 'Apple Card', 'Goldman Sachs', 'mastercard'],
-    ['everyday-debit', 'Everyday Debit', 'Your bank', 'visa'],
+    ['everyday-debit', 'Everyday Debit', 'Chase', 'visa'],
   ] as const
 ).map(([type, name, issuer, network]) => ({
   type: type as CardType,
