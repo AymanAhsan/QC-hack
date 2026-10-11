@@ -27,6 +27,16 @@ Third-party designs, components, and assets used in the app (`frontend/`).
 - **devices.css** (MIT, https://github.com/picturepan2/devices.css) by Yan Zhu — the iPhone 14
   frame around the app in `?preview`, copied into `src/components/iphone-14.css` (changes listed
   in that file's header).
+- **Card designs** — `public/card-art/*.webp` are the issuers' own card art: Amex Gold from
+  americanexpress.com, Sapphire Preferred from chase.com, and Venture X, Apple Card, and
+  Freedom Unlimited from Bankrate's card database. Each is trimmed to the card edge and
+  enlarged 2x. Amex's sample last four is erased; Freedom Unlimited's "No annual fee" sash,
+  "Unlimited" line, and sample name are erased, leaving the plain Freedom design. Chase
+  publishes no debit card image, so `everyday-debit.webp` is laid out like Chase's Visa debit
+  card from Chase's own logo file (chase.com), the chip and contactless marks from the Freedom
+  art, and the Visa logo from react-svg-credit-card-payment-icons. The designs are trademarks
+  of American Express, JPMorgan Chase, Capital One, Apple, and Visa, and are used only to
+  show which card is which.
 - **Merchant logos** — `public/logos/*.webp` are each company's own App Store icon (from the
   iTunes Search API), shrunk to 120px; Trader Joe's has no official app, so its website icon.
   The logos are trademarks of their owners and are used only to identify the merchants.

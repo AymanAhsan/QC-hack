@@ -183,16 +183,30 @@ export function MerchantMark({ id, name, size = 36 }: { id: string; name: string
   )
 }
 
-// Card faces follow Untitled UI's CreditCard (MIT, github.com/untitleduico/react):
+/**
+ * Cards with the issuer's real card design in public/card-art (see CREDITS.md).
+ * The design already carries the bank and network logos, so only the store
+ * badge and the last four go on top. `badge: 'left'` keeps it off a logo.
+ */
+const ART: Record<string, { badge?: 'left' }> = {
+  'amex-gold': {},
+  'chase-sapphire': {},
+  'chase-freedom': {},
+  'venture-x': { badge: 'left' },
+  'apple-card': {},
+  'everyday-debit': {},
+}
+
+// Every other card follows Untitled UI's CreditCard (MIT, github.com/untitleduico/react):
 // a flat two-tone fill, a 1px edge highlight that fades out from the top-left,
-// network logo bottom-right. No art.
+// network logo bottom-right. The fills also show while a card's art loads.
 const FACES: Record<string, Face> = {
   'amex-gold': { from: '#A08250', to: '#CFB685', glint: '#F6E4B4', ink: '#1E1709', ring: 'rgba(255,255,255,0.45)', mark: 'dark' },
   'chase-sapphire': { from: '#0B1830', to: '#22406F', glint: '#6B93D6', ink: '#FFFFFF', ring: 'rgba(255,255,255,0.28)', mark: 'light' },
   'chase-freedom': { from: '#1B4FA3', to: '#4285DA', glint: '#A5CEFF', ink: '#FFFFFF', ring: 'rgba(255,255,255,0.32)', mark: 'light' },
   'venture-x': { from: '#131315', to: '#38383E', glint: '#9A9AA3', ink: '#FFFFFF', ring: 'rgba(255,255,255,0.26)', mark: 'light' },
   'apple-card': { from: '#E2E2E6', to: '#FFFFFF', glint: '#FFFFFF', ink: '#1C1C1E', ring: 'rgba(0,0,0,0.08)', mark: 'dark' },
-  'everyday-debit': { from: '#1E3A35', to: '#335B51', glint: '#7DB3A3', ink: '#FFFFFF', ring: 'rgba(255,255,255,0.26)', mark: 'light' },
+  'everyday-debit': { from: '#082A5C', to: '#0D5BB0', glint: '#6FA8E6', ink: '#FFFFFF', ring: 'rgba(255,255,255,0.28)', mark: 'light' },
 }
 
 function faceFor(card: CardLook): Face {
@@ -234,10 +248,11 @@ export function CardFace({
   /** Shown at the end of the top row (e.g. earnings at this store). */
   badge?: React.ReactNode
   radius?: number
-  /** Render the card's live iridescent surface. Keep it to one card on screen. */
+  /** Render the card's live iridescent surface (cards without art only). Keep it to one card on screen. */
   live?: boolean
 }) {
   const f = faceFor(card)
+  const art = ART[card.type]
   const r = radius ?? (compact ? 6 : 16)
   const squircle = !compact
   const face = (
@@ -250,8 +265,28 @@ export function CardFace({
         containerType: 'inline-size',
       }}
     >
-      {live ? <CardMaterial face={f} /> : null}
-      {!compact ? (
+      {art ? (
+        <img
+          src={`${import.meta.env.BASE_URL}card-art/${card.type}.webp`}
+          alt=""
+          draggable={false}
+          decoding="async"
+          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+        />
+      ) : live ? (
+        <CardMaterial face={f} />
+      ) : null}
+      {compact ? null : art ? (
+        <div className="absolute inset-0 flex flex-col justify-between p-[5cqw]">
+          <div className={`flex ${art.badge === 'left' ? 'justify-start' : 'justify-end'}`}>{badge}</div>
+          <span
+            className="self-start text-[4.2cqw] font-semibold tabular-nums tracking-[0.08em]"
+            style={{ textShadow: f.mark === 'light' ? '0 1px 2px rgb(0 0 0 / 0.45)' : undefined }}
+          >
+            •••• {card.last4}
+          </span>
+        </div>
+      ) : (
         <div className="absolute inset-0 flex flex-col justify-between p-[5cqw]">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[4.75cqw] font-semibold leading-[1.3] tracking-[-0.01em]">{card.name}</span>
@@ -262,7 +297,7 @@ export function CardFace({
             <NetworkLogo network={card.network} mark={f.mark} />
           </div>
         </div>
-      ) : null}
+      )}
       <div
         className="pointer-events-none absolute inset-0 rounded-[inherit]"
         style={{ boxShadow: `inset 0 0 0 1px ${f.ring}`, maskImage: 'linear-gradient(135deg, #000, rgb(0 0 0 / 0.2))' }}

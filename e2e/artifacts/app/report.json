@@ -1,30 +1,30 @@
 {
-  "started_at": "2026-10-11T02:44:32.808Z",
+  "started_at": "2026-10-11T04:57:09.346Z",
   "checks": [
     {
       "name": "Wallet finds Trader Joe’s from the location and ranks every card",
       "ok": true,
-      "ms": 416
+      "ms": 431
     },
     {
       "name": "Opening a card shows what it earns here and its purchases",
       "ok": true,
-      "ms": 469
+      "ms": 427
     },
     {
       "name": "Why sheet explains the pick",
       "ok": true,
-      "ms": 1450
+      "ms": 1440
     },
     {
       "name": "Card details lists its rates and where it wins (GET /api/wallet/{id}/benefits)",
       "ok": true,
-      "ms": 1869
+      "ms": 1789
     },
     {
       "name": "Holding to pay with the best card logs one purchase",
       "ok": true,
-      "ms": 4291,
+      "ms": 4251,
       "detail": {
         "saved": {
           "merchant": "Trader Joe's",
@@ -37,32 +37,32 @@
     {
       "name": "The new purchase shows in the card’s history",
       "ok": true,
-      "ms": 120
+      "ms": 100
     },
     {
       "name": "Letting go early cancels the payment",
       "ok": true,
-      "ms": 2938
+      "ms": 2901
     },
     {
       "name": "A typed checkout total re-ranks the cards",
       "ok": true,
-      "ms": 1297
+      "ms": 1251
     },
     {
       "name": "Leaving the store keeps you out of it",
       "ok": true,
-      "ms": 1553
+      "ms": 1555
     },
     {
       "name": "Costco: cards it doesn’t take are marked, and a Visa card wins",
       "ok": true,
-      "ms": 1374
+      "ms": 1340
     },
     {
       "name": "Adding a card saves it, and removing it deletes it",
       "ok": true,
-      "ms": 2948,
+      "ms": 3185,
       "detail": {
         "added": "Apple Card 0007"
       }
@@ -70,17 +70,17 @@
     {
       "name": "Scan: the sample cart stacks SAVE15 with Apple Card for $17.55 back",
       "ok": true,
-      "ms": 2602
+      "ms": 2597
     },
     {
       "name": "Logging a different card says what it missed",
       "ok": true,
-      "ms": 2043
+      "ms": 2135
     },
     {
       "name": "Rewards adds it up from GET /api/missed",
       "ok": true,
-      "ms": 1905,
+      "ms": 1903,
       "detail": {
         "left_on_the_table": "$72.30",
         "purchases": 32
@@ -89,57 +89,57 @@
     {
       "name": "Typing a store checks the form, then stacks it",
       "ok": true,
-      "ms": 2761
+      "ms": 3257
     },
     {
       "name": "Uploaded screenshot of an unknown store is read",
       "ok": true,
-      "ms": 5626
+      "ms": 4929
     },
     {
       "name": "Uploaded screenshot of a known store uses its coupon",
       "ok": true,
-      "ms": 4366
+      "ms": 3844
     },
     {
       "name": "A screenshot that isn’t a cart falls back to the sample, and says why",
       "ok": true,
-      "ms": 3375
+      "ms": 2833
     },
     {
       "name": "A file that isn’t an image is turned away with a clear message",
       "ok": true,
-      "ms": 613
+      "ms": 610
     },
     {
       "name": "Deals lists today’s stacks; arrow keys switch categories",
       "ok": true,
-      "ms": 1621
+      "ms": 1636
     },
     {
       "name": "A deal opens the same stack in Scan",
       "ok": true,
-      "ms": 2258
+      "ms": 2220
     },
     {
       "name": "Laptop: a sidebar, and the best card open beside the stack",
       "ok": true,
-      "ms": 915
+      "ms": 893
     },
     {
       "name": "Laptop: Pay opens as a panel in the middle",
       "ok": true,
-      "ms": 1710
+      "ms": 1672
     },
     {
       "name": "Laptop: every tab lays out wide",
       "ok": true,
-      "ms": 5434
+      "ms": 5412
     },
     {
       "name": "?preview shows the phone app in an iPhone frame; the side button opens Pay",
       "ok": true,
-      "ms": 1820
+      "ms": 1723
     },
     {
       "name": "No unexpected console errors",
@@ -182,6 +182,6 @@
     "version": "0.1.0"
   },
   "browser": "chromium 155.0.8059.39",
-  "finished_at": "2026-10-11T02:45:33.577Z",
+  "finished_at": "2026-10-11T04:58:07.464Z",
   "passed": true
 }
