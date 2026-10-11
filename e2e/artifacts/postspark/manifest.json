@@ -1,0 +1,172 @@
+{
+  "tool": "https://postspark.app/device-mockup",
+  "device": "iPhone 17 Pro, Deep Blue",
+  "sourceResolution": [
+    1206,
+    2622
+  ],
+  "exports": [
+    {
+      "file": "frontend/public/presentation/assets/cover-postspark.png",
+      "background": "BUILT_IN__19",
+      "layoutIndex": 0,
+      "screens": [
+        "wallet"
+      ],
+      "width": 1080,
+      "height": 1350,
+      "sha256": "0b16ef367f92eafa06aa9691cb035f53eb38c3f1b6645babb8fd19b1b0f228af"
+    },
+    {
+      "file": "frontend/public/presentation/assets/overview-wallet-scan-postspark.png",
+      "background": "BUILT_IN__wallpaper-07",
+      "layoutIndex": 10,
+      "screens": [
+        "wallet",
+        "scan"
+      ],
+      "width": 1440,
+      "height": 1080,
+      "sha256": "608c4538ed70de45115c4663355924782d301ce99ae2b94a9e2c343a9d6d4fde"
+    },
+    {
+      "file": "frontend/public/presentation/assets/overview-deals-rewards-postspark.png",
+      "background": "BUILT_IN__wallpaper-10",
+      "layoutIndex": 7,
+      "screens": [
+        "deals",
+        "rewards"
+      ],
+      "width": 1440,
+      "height": 1080,
+      "sha256": "7e715a008ce09ceeea67298d35a183d0c6942a12152fc3ab139ea5e56c306b02",
+      "zoom": 0.9,
+      "rotation": 0,
+      "composition": "Upright staggered pair"
+    },
+    {
+      "file": "frontend/public/presentation/assets/wallet-postspark.png",
+      "background": "BUILT_IN__wallpaper-08",
+      "layoutIndex": 2,
+      "screens": [
+        "wallet"
+      ],
+      "width": 1080,
+      "height": 1350,
+      "sha256": "9090ea5c4f6b0ece207fc26412bafdc261aa9f4a4a4d78d158a2733988d13068",
+      "zoom": 1.25,
+      "rotation": 0,
+      "composition": "Enlarged upright phone, bottom cropped"
+    },
+    {
+      "file": "frontend/public/presentation/assets/pay-postspark.png",
+      "background": "BUILT_IN__16",
+      "layoutIndex": 4,
+      "screens": [
+        "pay"
+      ],
+      "width": 1080,
+      "height": 1350,
+      "sha256": "33e83f86e3651b46682a7f1b7ee9de257b9d5d8cebf5f023ef0b3ebfa2cc25ac",
+      "zoom": 1.25,
+      "rotation": 0,
+      "composition": "Top cropped to focus on payment confirmation"
+    },
+    {
+      "file": "frontend/public/presentation/assets/costco-postspark-sharp.png",
+      "background": "BUILT_IN__wallpaper-09",
+      "layoutIndex": 1,
+      "screens": [
+        "costco"
+      ],
+      "width": 1080,
+      "height": 1350,
+      "sha256": "d4e57543184b70d6d5534d5625573918ef6517b93487cd0b6a8b2e4e4b1b6eeb"
+    },
+    {
+      "file": "frontend/public/presentation/assets/scan-postspark.png",
+      "background": "BUILT_IN__wallpaper-03",
+      "layoutIndex": 0,
+      "screens": [
+        "scan"
+      ],
+      "width": 1080,
+      "height": 1350,
+      "sha256": "f69d691668fd08e3481703df287772c1b83829e974384ef871d5459b87865218",
+      "zoom": 0.85,
+      "rotation": 12,
+      "composition": "Smaller full phone tilted clockwise"
+    },
+    {
+      "file": "frontend/public/presentation/assets/deals-postspark.png",
+      "background": "BUILT_IN__24",
+      "layoutIndex": 9,
+      "screens": [
+        "deals",
+        "scan"
+      ],
+      "width": 1080,
+      "height": 1080,
+      "sha256": "d9c3be5b6d9e193f07e445bed8f04b71e41ee982570f842ce2a547ee2a8d5b0c",
+      "zoom": 1,
+      "rotation": 0,
+      "composition": "Square canvas with overlapping parallel phones"
+    },
+    {
+      "file": "frontend/public/presentation/assets/rewards-postspark.png",
+      "background": "BUILT_IN__22",
+      "layoutIndex": 3,
+      "screens": [
+        "rewards"
+      ],
+      "width": 1080,
+      "height": 1080,
+      "sha256": "d521f0eb5a4829fae1dd6dda5820c3f2ed69032f0455a26d3fffc91536165984",
+      "zoom": 1.7,
+      "rotation": 0,
+      "composition": "Square canvas with tight upper-screen crop"
+    },
+    {
+      "file": "frontend/public/presentation/assets/closing-postspark.png",
+      "background": "BUILT_IN__wallpaper-14",
+      "layoutIndex": 16,
+      "screens": [
+        "scan",
+        "wallet",
+        "rewards"
+      ],
+      "width": 1440,
+      "height": 1080,
+      "sha256": "d9c5d5cfaadd6709381b15ca115147b61c383d31c939dfa6efe6e7a4cf55fbf2"
+    }
+  ],
+  "verification": {
+    "typecheck": "passed",
+    "tests": "13 passed",
+    "build": "passed",
+    "viewports": [
+      [
+        1920,
+        1080
+      ],
+      [
+        1280,
+        720
+      ],
+      [
+        390,
+        844
+      ]
+    ],
+    "frontendLint": "No lint script configured",
+    "backendLint": "Ruff passed",
+    "backendApiTests": "11 passed"
+  },
+  "reproduce": [
+    "Start frontend with npm run dev, then open /presentation/index.html#1.",
+    "At each viewport, navigate all 14 slides using ArrowRight; wait for opacity transitions and Rewards count-up to finish.",
+    "Verify every visible image is loaded and no content crosses viewport width. Desktop slides must also fit viewport height.",
+    "Capture each slide; compare the resulting images with slide-01.jpg through slide-14.jpg.",
+    "To regenerate mockups, upload the corresponding *-screen.jpg files to PostSpark, select the recorded device, layout, and built-in background, then Export HD PNG. Costco source is in ../mockup-sample/costco-screen-1206x2622.jpg."
+  ]
+}
