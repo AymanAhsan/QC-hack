@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { AnimatePresence, MotionConfig, motion, useScroll, useTransform, type Variants } from 'motion/react'
+import { DesktopIcon, DeviceMobileIcon } from '@phosphor-icons/react'
 import { NavProvider, TABS, useNav, type Tab } from './navigation'
 import { LocationProvider } from './location'
 import { useSession, type Session } from './session'
@@ -36,27 +37,77 @@ function useMedia(query: string) {
   return match
 }
 
-/** Phone: tab bar. Laptop (>= 1024 px): sidebar. `?preview`: the phone layout inside an iPhone frame. */
+type View = 'mobile' | 'desktop'
+const VIEW_KEY = 'creditmaxx-view'
+
+function readView(): View | null {
+  try {
+    const v = localStorage.getItem(VIEW_KEY)
+    return v === 'mobile' || v === 'desktop' ? v : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Phone: tab bar. Laptop (>= 1024 px): sidebar. `?preview`: the phone layout inside an iPhone frame.
+ * The corner toggle overrides the automatic choice; "mobile" uses the iPhone frame when there's room.
+ */
 function Root() {
   const preview = new URLSearchParams(location.search).has('preview')
   const small = useMedia('(max-width: 519px)')
   const wide = useMedia('(min-width: 1024px)')
+  const [view, setView] = useState<View | null>(readView)
+  const current: View = view ?? (preview || !wide ? 'mobile' : 'desktop')
 
-  if (preview && !small) {
-    return (
-      <PhoneFrame>
-        <Screen layout="phone" className="device device-screen" style={{ ['--sat' as string]: '47px', ['--sab' as string]: '26px' }}>
-          <ScreenChrome />
-        </Screen>
-      </PhoneFrame>
-    )
+  const toggle = () => {
+    const next: View = current === 'mobile' ? 'desktop' : 'mobile'
+    setView(next)
+    try {
+      localStorage.setItem(VIEW_KEY, next)
+    } catch {
+      // Private mode or blocked storage: the choice lasts until reload.
+    }
   }
+
+  const framed = current === 'mobile' && !small && (preview || view === 'mobile')
+  const layout: Layout = current === 'desktop' ? 'wide' : 'phone'
+
   return (
-    <Screen
-      layout={wide ? 'wide' : 'phone'}
-      className="device h-dvh w-full"
-      style={{ ['--sat' as string]: wide ? '0px' : 'max(12px, env(safe-area-inset-top, 0px))', ['--sab' as string]: 'env(safe-area-inset-bottom, 0px)' }}
-    />
+    <>
+      {framed ? (
+        <PhoneFrame>
+          <Screen layout="phone" className="device device-screen" style={{ ['--sat' as string]: '47px', ['--sab' as string]: '26px' }}>
+            <ScreenChrome />
+          </Screen>
+        </PhoneFrame>
+      ) : (
+        <Screen
+          layout={layout}
+          className="device h-dvh w-full"
+          style={{ ['--sat' as string]: layout === 'wide' ? '0px' : 'max(12px, env(safe-area-inset-top, 0px))', ['--sab' as string]: 'env(safe-area-inset-bottom, 0px)' }}
+        />
+      )}
+      <ViewToggle view={current} onToggle={toggle} />
+    </>
+  )
+}
+
+/** The small corner button that switches between the mobile and desktop layouts. */
+function ViewToggle({ view, onToggle }: { view: View; onToggle: () => void }) {
+  const next = view === 'mobile' ? 'desktop' : 'mobile'
+  const Icon = next === 'desktop' ? DesktopIcon : DeviceMobileIcon
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={`Switch to ${next} view`}
+      title={`Switch to ${next} view`}
+      className="fixed right-7 top-3 z-[1000] flex items-center gap-1.5 rounded-full border-[0.5px] border-white/15 bg-black/60 px-3 py-1.5 text-[12px] font-medium text-white/85 backdrop-blur-md transition-colors hover:bg-black/80 hover:text-white"
+    >
+      <Icon size={14} weight="bold" />
+      {next === 'desktop' ? 'Desktop' : 'Mobile'}
+    </button>
   )
 }
 
