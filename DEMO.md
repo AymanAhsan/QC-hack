@@ -80,6 +80,7 @@ Tabs, left to right: Wallet, Scan, Deals, Missed.
 3. Press and **hold** "Hold Near Terminal" for about two seconds. Radar pulses, then "Reading Card…", then the green check, chime, and receipt: $42.50 authorized, +170 points ($3.06).
    - Letting go early cancels. That is by design; just hold again.
 4. Tap Done on the receipt.
+5. Optional: change the **Checkout** amount (e.g. to `100`) and tap away. The ranking reruns for the new total: Amex Gold earns $7.20 / 400 points.
 
 ### 2. Costco: the card that looks best gets rejected (30 s)
 
@@ -108,6 +109,8 @@ If you have time, pick Target as well: it is coded as a discount store, not a su
 Open Deals, show the Meals, Clothing, and Travel stacks, and tap one. It opens in Scan with the full breakdown.
 
 ## Extra beats if someone asks
+
+- **Laptop or projector.** The same app adapts at 1024 px and wider: a sidebar replaces the tab bar, Wallet shows the deck beside the "why" panel, Scan shows the stack beside the card picker, Deals is a grid, and Missed keeps the total pinned beside the chart.
 
 - **A store we have never heard of.** In Scan, type a store such as "Joe's Pizza" and a subtotal. It gets a simulated coupon (from Gemini, or a deterministic offline one) and a ranked wallet. The coupon is labelled as simulated.
 - **A different wallet.** Wallet → Manage cards → enter a new demo user ID (for example `judge`) → Switch user. That wallet starts empty; add two or three cards and the recommendations change to match. Switch back to `demo` afterwards. Prefer this over deleting cards from `demo`: deletions persist across restarts.

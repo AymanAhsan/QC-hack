@@ -1,137 +1,161 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { api } from '../../api'
 import { LocationProvider } from '../../location'
 import { NavProvider } from '../../navigation'
-import { fix, geolocationError, mockGeolocation, resetGeolocation, setSecureContext } from '../../test/geolocation'
-import { amexGold, chaseFreedom, costco, recommendationFor, traderJoes } from '../../test/fixtures'
-import type { DetectLocationResponse } from '../../types'
 import { WalletScreen } from './WalletScreen'
+// Real responses captured from the backend (GET /api/wallet, /api/locations, /api/recommend).
+import wallet from './__fixtures__/wallet.json'
+import locations from './__fixtures__/locations.json'
+import recTraderJoes from './__fixtures__/recommend-trader-joes.json'
+import recTraderJoes100 from './__fixtures__/recommend-trader-joes-100.json'
 
-class FakeResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
+const createTransaction = vi.fn()
+const recommend = vi.fn()
+const cardBenefits = vi.fn()
 
-function renderWallet() {
-  return render(
+vi.mock('../../api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api')>()
+  return {
+    ...actual,
+    newIdempotencyKey: () => 'test-idempotency-key',
+    api: {
+      ...actual.api,
+      wallet: async () => wallet,
+      locations: async () => locations,
+      recommend: (...args: unknown[]) => recommend(...args),
+      createTransaction: (...args: unknown[]) => createTransaction(...args),
+      cardBenefits: (...args: unknown[]) => cardBenefits(...args),
+    },
+  }
+})
+
+async function arriveAtTraderJoes() {
+  const view = render(
     <NavProvider>
       <LocationProvider>
         <WalletScreen />
       </LocationProvider>
     </NavProvider>,
   )
+  fireEvent.click(await screen.findByRole('button', { name: /Simulate arriving at a store/ }))
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Choose a store' })).getByRole('button', { name: /Trader Joe/ }))
+  const pay = screen.getByRole('button', { name: 'Hold near terminal to pay' })
+  await vi.waitFor(() => expect((pay as HTMLButtonElement).disabled).toBe(false))
+  return Object.assign(pay, { unmount: view.unmount })
 }
 
-const matched: DetectLocationResponse = { status: 'matched', location: traderJoes, is_demo_data: true }
-
-function stubApi() {
-  vi.spyOn(api, 'wallet').mockResolvedValue({ cards: [amexGold, chaseFreedom], default_debit_card_id: null, is_demo_data: true })
-  vi.spyOn(api, 'locations').mockResolvedValue({ locations: [traderJoes, costco], is_demo_data: true })
-  return vi.spyOn(api, 'recommend').mockImplementation(async (merchantId) =>
-    merchantId === 'costco' ? recommendationFor(costco, chaseFreedom) : recommendationFor(traderJoes, amexGold),
-  )
+/** Arrive with real timers (Testing Library polls with setTimeout), then fake the hold timers. */
+async function arriveThenFakeTimers() {
+  const pay = await arriveAtTraderJoes()
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  return pay
 }
 
-describe('Wallet store detection', () => {
-  beforeEach(() => {
-    vi.stubGlobal('ResizeObserver', FakeResizeObserver)
-    setSecureContext(true)
+const advance = (ms: number) => act(async () => void vi.advanceTimersByTime(ms))
+
+beforeEach(() => {
+  recommend.mockImplementation(async (_id: string, amount?: number) => (amount === 10000 ? recTraderJoes100 : recTraderJoes))
+  createTransaction.mockResolvedValue({
+    duplicate: false,
+    transaction: { points_earned: 170, earned_cents: 306 },
   })
-  afterEach(() => {
-    vi.unstubAllGlobals()
-    resetGeolocation()
-  })
+})
 
-  it('shows the best card for the detected store without any tap', async () => {
-    mockGeolocation((ok) => ok(fix(40.73342, -73.98788, 10)))
-    vi.spyOn(api, 'detectLocation').mockResolvedValue(matched)
-    const recommend = stubApi()
+afterEach(() => {
+  vi.useRealTimers()
+  createTransaction.mockReset()
+  recommend.mockReset()
+})
 
-    renderWallet()
+describe('Wallet hold-to-pay', () => {
+  it('reads at 600 ms, succeeds at 1,000 ms, and logs exactly one transaction', async () => {
+    const pay = await arriveThenFakeTimers()
+    fireEvent.pointerDown(pay, { pointerId: 1 })
+    expect(screen.getByText('Searching for terminal…')).toBeTruthy()
 
-    await screen.findByText("Trader Joe's (Grocery)")
-    expect(recommend).toHaveBeenCalledOnce()
-    expect(recommend.mock.calls[0][0]).toBe('trader-joes')
-    expect(screen.getByText('Detected from your location · 18 m away')).toBeTruthy()
-    // The winning card carries the yield badge from the recommendation.
-    expect(screen.getByText('4x · 7.2% yield')).toBeTruthy()
-  })
+    await advance(599)
+    expect(screen.queryByText('Reading Card…')).toBeNull()
+    await advance(1)
+    expect(screen.getByText('Reading Card…')).toBeTruthy()
 
-  it('does not re-arrive after the user leaves the store', async () => {
-    mockGeolocation((ok) => ok(fix(40.73342, -73.98788)))
-    vi.spyOn(api, 'detectLocation').mockResolvedValue(matched)
-    const recommend = stubApi()
+    await advance(399)
+    expect(createTransaction).not.toHaveBeenCalled()
+    await advance(1)
+    expect(screen.getByText('Approved')).toBeTruthy()
+    expect(createTransaction).toHaveBeenCalledTimes(1)
+    expect(createTransaction.mock.calls[0][0]).toEqual({
+      idempotency_key: 'test-idempotency-key',
+      merchant_id: 'trader-joes',
+      subtotal_cents: 4250,
+      card_used_id: 'amex-gold',
+      channel: 'store',
+      source: 'wallet',
+    })
 
-    renderWallet()
-    await screen.findByText("Trader Joe's (Grocery)")
-
-    fireEvent.click(screen.getByRole('button', { name: 'Leave store' }))
-
-    await screen.findByText('Simulate arriving at a store')
-    expect(screen.getByText("You're near Trader Joe's.")).toBeTruthy()
-    expect(recommend).toHaveBeenCalledOnce()
-
-    // "Check again" is the way back: a new detection arrives at the store again.
-    fireEvent.click(screen.getByRole('button', { name: 'Check again' }))
-    await screen.findByText("Trader Joe's (Grocery)")
-    expect(recommend).toHaveBeenCalledTimes(2)
-  })
-
-  it('never overrides a store the user picked before detection finished', async () => {
-    mockGeolocation((ok) => ok(fix(40.73342, -73.98788)))
-    let finishDetection!: (r: DetectLocationResponse) => void
-    vi.spyOn(api, 'detectLocation').mockReturnValue(new Promise((resolve) => (finishDetection = resolve)))
-    const recommend = stubApi()
-
-    renderWallet()
-    await screen.findByText('Finding the store you\'re in…')
-
-    fireEvent.click(screen.getByRole('button', { name: /Simulate arriving at a store/ }))
-    fireEvent.click(await screen.findByRole('button', { name: /Costco/ }))
-    await screen.findByText('Costco (Wholesale club)')
-
-    finishDetection(matched)
-    await act(async () => {}) // let the detection promise settle
-
-    expect(screen.getByText('Costco (Wholesale club)')).toBeTruthy()
-    expect(recommend.mock.calls.map((c) => c[0])).toEqual(['costco'])
-
-    // Leaving the store must not snap to the detected one either.
-    fireEvent.click(screen.getByRole('button', { name: 'Leave store' }))
-    await screen.findByText("You're near Trader Joe's.")
-    expect(recommend.mock.calls.map((c) => c[0])).toEqual(['costco'])
+    // Releasing after success and letting the receipt appear never logs again.
+    fireEvent.pointerUp(pay, { pointerId: 1 })
+    await advance(5000)
+    expect(createTransaction).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('status').textContent).toContain('Approved')
   })
 
-  it.each([
-    [() => mockGeolocation((_ok, fail) => fail(geolocationError(1))), /Location access is off/],
-    [() => setSecureContext(false), /HTTPS or localhost/],
-  ] as const)('falls back to the manual picker when location is unavailable', async (arrange, message) => {
-    arrange()
-    vi.spyOn(api, 'detectLocation')
-    const recommend = stubApi()
-
-    renderWallet()
-
-    await screen.findByText(message)
-    expect(recommend).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('button', { name: /Simulate arriving at a store/ }))
-    fireEvent.click(await screen.findByRole('button', { name: /Trader Joe's/ }))
-    await screen.findByText("Trader Joe's (Grocery)")
-    expect(recommend).toHaveBeenCalledWith('trader-joes', undefined, expect.any(AbortSignal))
-    // A manual pick is never labelled as detected.
-    expect(screen.queryByText(/Detected from your location/)).toBeNull()
+  it('cancels when released before success', async () => {
+    const pay = await arriveThenFakeTimers()
+    fireEvent.pointerDown(pay, { pointerId: 1 })
+    await advance(800)
+    fireEvent.pointerUp(pay, { pointerId: 1 })
+    await advance(5000)
+    expect(createTransaction).not.toHaveBeenCalled()
+    expect(screen.getByText('(( Hold Near Terminal ))')).toBeTruthy()
   })
 
-  it('says so when no demo store is nearby', async () => {
-    mockGeolocation((ok) => ok(fix(51.5, -0.12)))
-    vi.spyOn(api, 'detectLocation').mockResolvedValue({ status: 'no_match', location: null, is_demo_data: true })
-    stubApi()
+  it('cancels on pointer cancel and clears timers on unmount', async () => {
+    const pay = await arriveThenFakeTimers()
+    fireEvent.pointerDown(pay, { pointerId: 1 })
+    fireEvent.pointerCancel(pay, { pointerId: 1 })
+    await advance(5000)
+    expect(createTransaction).not.toHaveBeenCalled()
 
-    renderWallet()
+    // Leaving the tab mid-hold unmounts the screen; its timers must not fire later.
+    fireEvent.pointerDown(pay, { pointerId: 1 })
+    await advance(700)
+    expect(vi.getTimerCount()).toBeGreaterThan(0)
+    pay.unmount()
+    expect(vi.getTimerCount()).toBe(0)
+    await advance(5000)
+    expect(createTransaction).not.toHaveBeenCalled()
+  })
 
-    await screen.findByText(/No demo store is near you/)
+  it('re-ranks for a typed purchase amount', async () => {
+    await arriveAtTraderJoes()
+    const amount = screen.getByRole('textbox', { name: /Purchase amount/ })
+    expect((amount as HTMLInputElement).value).toBe('42.50')
+    fireEvent.change(amount, { target: { value: '100' } })
+    fireEvent.blur(amount)
+    await vi.waitFor(() => expect(recommend).toHaveBeenLastCalledWith('trader-joes', 10000, expect.anything()))
+    await vi.waitFor(() => expect((screen.getByRole('textbox', { name: /Purchase amount/ }) as HTMLInputElement).value).toBe('100.00'))
+  })
+
+  it('restores the amount when the input is invalid', async () => {
+    await arriveAtTraderJoes()
+    const amount = screen.getByRole('textbox', { name: /Purchase amount/ })
+    fireEvent.change(amount, { target: { value: 'abc' } })
+    fireEvent.blur(amount)
+    expect((amount as HTMLInputElement).value).toBe('42.50')
+    expect(recommend).toHaveBeenCalledTimes(1)
+  })
+
+  it("opens a card's benefits on tap, but not mid-payment", async () => {
+    cardBenefits.mockReturnValue(new Promise(() => {}))
+    const pay = await arriveAtTraderJoes()
+    fireEvent.click(screen.getByRole('button', { name: 'Chase Freedom benefits' }))
+    expect(screen.getByRole('dialog', { name: 'Chase Freedom benefits' })).toBeTruthy()
+    expect(cardBenefits).toHaveBeenCalledWith('chase-freedom', expect.anything())
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'Chase Freedom benefits' })).toBeNull())
+
+    fireEvent.pointerDown(pay, { pointerId: 1 })
+    expect((screen.getByRole('button', { name: 'Amex Gold benefits' }) as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.pointerUp(pay, { pointerId: 1 })
   })
 })

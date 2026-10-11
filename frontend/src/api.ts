@@ -5,6 +5,7 @@
 // codes "network_error" and "timeout".
 
 import type {
+  CardBenefitsResponse,
   Card,
   CardCreate,
   CartParseResponse,
@@ -23,6 +24,8 @@ import type {
   WalletResponse,
 } from './types'
 
+// Vercel routes browser requests at /api to the backend, preserving the prefix.
+// Keep VITE_API_BASE_URL unset there. Runtime service bindings are server-only.
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 
 export function activeUserId(): string {
@@ -113,6 +116,9 @@ export const api = {
   health: (signal?: AbortSignal) => request<HealthResponse>('/api/health', { signal }),
 
   wallet: (signal?: AbortSignal) => request<WalletResponse>('/api/wallet', { signal }),
+
+  cardBenefits: (cardId: string, signal?: AbortSignal) =>
+    request<CardBenefitsResponse>(`/api/wallet/${encodeURIComponent(cardId)}/benefits`, { signal }),
 
   locations: (signal?: AbortSignal) => request<LocationsResponse>('/api/locations', { signal }),
 

@@ -3,6 +3,7 @@
 
 import { motion } from 'motion/react'
 import type { PayPhase } from './WalletScreen'
+import { READ_DURATION_MS } from './timing'
 
 interface Props {
   phase: PayPhase
@@ -88,7 +89,7 @@ export function PayButton({ phase, disabled, onHoldStart, onHoldEnd }: Props) {
                   cx="14" cy="14" r="11" fill="none" stroke="rgba(0,210,255,0.85)" strokeWidth="3" strokeLinecap="round"
                   initial={{ pathLength: 0 }}
                   animate={{ pathLength: 1 }}
-                  transition={{ duration: 1, ease: 'linear' }}
+                  transition={{ duration: READ_DURATION_MS / 1000, ease: 'linear' }}
                 />
               </svg>
               Reading Card…
