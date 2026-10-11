@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CardMaxxing Pitch</title>
+<script>
+  // Relative asset paths need the trailing slash: /presentation -> /presentation/
+  if (/\/presentation$/.test(location.pathname)) location.replace(location.pathname + "/" + location.search + location.hash);
+</script>
+<style>
+  :root {
+    --bg: #000;
+    --panel: #111113;
+    --panel-2: #18181b;
+    --line: #27272a;
+    --text: #fafafa;
+    --muted: #a1a1aa;
+    --dim: #71717a;
+    --green: #4ade80;
+    --mint: #34d399;
+    --gold: #f5c84c;
+    --amber: #fcd9a8;
+    --red: #f87171;
+    --blue: #5cc8ff;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; overflow: hidden; }
+
+  .deck { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 6vh 7vw;
+    opacity: 0; pointer-events: none;
+    transform: translateY(16px);
+    transition: opacity .45s ease, transform .45s ease;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; transform: none; }
+
+  .eyebrow { font-size: clamp(12px, 1.1vw, 16px); letter-spacing: .18em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 1.2rem; }
+  h1 { font-size: clamp(44px, 7.5vw, 120px); line-height: .95; letter-spacing: -.035em; margin: 0; font-weight: 800; }
+  h2 { font-size: clamp(32px, 4.4vw, 68px); line-height: 1.02; letter-spacing: -.03em; margin: 0 0 2.5vh; font-weight: 750; }
+  p.lead { font-size: clamp(18px, 1.8vw, 28px); color: var(--muted); line-height: 1.4; max-width: 46ch; margin: 0; }
+  .accent { color: var(--mint); }
+  .gold { color: var(--gold); }
+  .red { color: var(--red); }
+
+  .two { display: grid; grid-template-columns: 1.1fr .9fr; gap: 5vw; align-items: center; height: 100%; }
+  .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6vw; margin-top: 4vh; }
+
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 3vh 1.8vw; }
+  .tile .emoji { font-size: clamp(28px, 2.6vw, 42px); }
+  .tile h3 { font-size: clamp(18px, 1.7vw, 26px); margin: 1.4vh 0 .8vh; letter-spacing: -.01em; }
+  .tile p { color: var(--muted); margin: 0; font-size: clamp(14px, 1.15vw, 18px); line-height: 1.45; }
+
+  .bullets { list-style: none; padding: 0; margin: 3vh 0 0; display: grid; gap: 1.6vh; }
+  .bullets li { font-size: clamp(16px, 1.5vw, 23px); color: var(--muted); line-height: 1.4; padding-left: 1.6em; position: relative; }
+  .bullets li::before { content: '✔'; position: absolute; left: 0; color: var(--green); font-weight: 700; }
+  .bullets li.x::before { content: '✖'; color: var(--red); }
+  .bullets b { color: var(--text); font-weight: 600; }
+
+  /* Title */
+  .title-wrap { display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; gap: 4vw; }
+  .team { margin-top: 5vh; display: flex; gap: .6rem; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: .45em 1em; font-size: clamp(13px, 1.1vw, 17px); color: var(--muted); }
+  .chip.live { color: var(--text); }
+  .chip.live::before { content: ''; display: inline-block; width: .55em; height: .55em; border-radius: 50%; background: var(--green); margin-right: .55em; box-shadow: 0 0 10px var(--green); vertical-align: middle; }
+
+  /* Card stack */
+  .stack { position: relative; width: min(30vw, 420px); aspect-ratio: 340 / 330; margin: 0 auto; perspective: 1200px; }
+  .stack img { position: absolute; left: 0; width: 100%; border-radius: 4.7%; transition: transform .9s cubic-bezier(.2,.9,.25,1.2), opacity .9s ease, filter .9s ease; box-shadow: 0 18px 40px rgba(0,0,0,.6); }
+  .stack img:nth-child(1) { top: 0%; }
+  .stack img:nth-child(2) { top: 7%; }
+  .stack img:nth-child(3) { top: 14%; }
+  .stack img:nth-child(4) { top: 21%; }
+  .stack img:nth-child(5) { top: 28%; }
+  .stack img:nth-child(6) { top: 35%; }
+  .slide.active .stack.lift img:not(.win) { opacity: .35; transform: translateY(14%); filter: saturate(.6); }
+  .slide.active .stack.lift img.win { transform: translateY(-36%) scale(1.06); z-index: 10; box-shadow: 0 0 60px rgba(245,200,76,.55), 0 20px 50px rgba(0,0,0,.7); }
+  .card-label { position: absolute; left: 7%; bottom: 10%; font-weight: 700; font-size: clamp(14px, 1.4vw, 22px); color: #1a1405; pointer-events: none; }
+
+  /* Why drawer */
+  .drawer { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 2.4vh 1.8vw; margin-top: 3vh; }
+  .drawer .hd { font-size: clamp(11px, .9vw, 14px); letter-spacing: .16em; color: var(--dim); font-weight: 600; margin-bottom: 1.4vh; }
+  .row { display: flex; justify-content: space-between; gap: 1rem; padding: 1vh 0; border-top: 1px solid var(--line); font-size: clamp(14px, 1.25vw, 20px); }
+  .row:first-of-type { border-top: 0; }
+  .row span:last-child { color: var(--muted); text-align: right; }
+  .pill { display: inline-block; margin-top: 1.6vh; background: rgba(74,222,128,.12); color: var(--green); border: 1px solid rgba(74,222,128,.35); border-radius: 999px; padding: .4em .9em; font-size: clamp(13px, 1.1vw, 17px); font-weight: 600; }
+
+  /* Rank table */
+  .rank { display: grid; gap: 1.2vh; margin-top: 3vh; }
+  .rank .r { display: grid; grid-template-columns: 3.2vw 1fr auto; gap: 1.2vw; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 1.4vh 1.4vw; font-size: clamp(14px, 1.3vw, 21px); }
+  .rank .r img { width: 100%; border-radius: 4px; }
+  .rank .r.out { opacity: .5; }
+  .rank .r.out .nm { text-decoration: line-through; text-decoration-color: var(--red); }
+  .rank .r.win { border-color: rgba(92,200,255,.6); box-shadow: 0 0 30px rgba(92,200,255,.18); }
+  .rank .tag { font-size: .8em; color: var(--muted); }
+  .rank .r.out .tag { color: var(--red); }
+  .rank .r.win .tag { color: var(--blue); font-weight: 700; }
+
+  /* Triple stack */
+  .layers { display: grid; gap: 1.6vh; }
+  .layer { display: grid; grid-template-columns: auto 1fr auto; gap: 1.4vw; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 2.2vh 1.6vw;
+    opacity: 0; transform: translateX(-20px); transition: opacity .5s ease, transform .5s ease; }
+  .slide.active .layer { opacity: 1; transform: none; }
+  .slide.active .layer:nth-child(2) { transition-delay: .25s; }
+  .slide.active .layer:nth-child(3) { transition-delay: .5s; }
+  .layer .n { width: 2.2em; height: 2.2em; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); color: var(--muted); font-weight: 700; font-size: clamp(13px, 1.1vw, 17px); }
+  .layer .t { font-size: clamp(16px, 1.5vw, 24px); font-weight: 600; }
+  .layer .s { color: var(--muted); font-size: clamp(13px, 1.1vw, 17px); margin-top: .3em; }
+  .layer .v { font-size: clamp(20px, 2.1vw, 34px); font-weight: 700; color: var(--mint); font-variant-numeric: tabular-nums; }
+  .layer.total { background: #04241a; border-color: #0f5c40; }
+  .layer.total .v { font-size: clamp(30px, 3.4vw, 54px); }
+  .code { font-family: var(--mono); border: 1px dashed #52525b; border-radius: 8px; padding: .1em .45em; }
+
+  .phone { height: 74vh; aspect-ratio: 780 / 1688; border-radius: 40px; border: 8px solid #1c1c1f; overflow: hidden; margin: 0 auto; box-shadow: 0 30px 80px rgba(0,0,0,.8), 0 0 0 1px #2a2a2e; background: #000; }
+  .phone img { width: 100%; display: block; }
+  .phone.scroll img { animation: none; }
+  .slide.active .phone.scroll img { animation: pan 9s 1s ease-in-out infinite alternate; }
+  @keyframes pan { from { transform: translateY(0); } to { transform: translateY(calc(-100% + 74vh - 16px)); } }
+
+  /* Fluent 3D emoji, the same set the app uses (public/emoji) */
+  .fe { width: clamp(30px, 2.8vw, 46px); height: auto; display: block; filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); }
+  .fe.sm { width: 1.3em; display: inline-block; vertical-align: -.25em; filter: none; }
+  .logo { width: 1.5em; height: 1.5em; border-radius: 22%; vertical-align: -.4em; margin-right: .35em; }
+
+  /* Hold to pay */
+  .pay-wrap { position: relative; display: grid; place-items: center; }
+  .rain { position: absolute; inset: -10vh -4vw; pointer-events: none; overflow: hidden; z-index: 5; }
+  .rain img { position: absolute; top: -12%; width: clamp(22px, 2.4vw, 40px); opacity: 0; }
+  .slide.active .rain img { animation: fall 2.6s cubic-bezier(.3,.1,.6,1) forwards; }
+  @keyframes fall { 0% { opacity: 0; transform: translateY(0) rotate(0); } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(105vh) rotate(540deg); } }
+  .holdring { display: flex; align-items: center; gap: 1.6vw; margin-top: 3.4vh; }
+  .holdring svg { width: clamp(64px, 6vw, 96px); height: auto; transform: rotate(-90deg); flex: none; }
+  .holdring .track { fill: none; stroke: #27272a; stroke-width: 8; }
+  .holdring .fill { fill: none; stroke: #30D158; stroke-width: 8; stroke-linecap: round; stroke-dasharray: 264; stroke-dashoffset: 264; }
+  .slide.active .holdring .fill { animation: hold 1.1s .5s ease-in forwards; }
+  @keyframes hold { to { stroke-dashoffset: 0; } }
+  .holdring .dot { fill: #30D158; opacity: 0; transform-origin: 50px 50px; }
+  .slide.active .holdring .dot { animation: pop .35s 1.6s cubic-bezier(.2,.9,.3,1.4) forwards; }
+  @keyframes pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+  .holdring .tick { fill: none; stroke: #04130a; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; }
+  .slide.active .holdring .tick { animation: tick .3s 1.8s ease-out forwards; }
+  @keyframes tick { to { stroke-dashoffset: 0; } }
+  .holdring .msg { font-size: clamp(20px, 2.2vw, 36px); font-weight: 700; color: var(--muted); }
+  .holdring .msg b { color: #30D158; opacity: 0; transition: opacity .3s; }
+  .slide.active .holdring .msg b { opacity: 1; transition-delay: 1.7s; }
+
+  /* Game loop */
+  .loop { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.4vh 1.2vw; margin-top: 2.6vh; }
+  .loop .tile { padding: 2vh 1.3vw; display: grid; grid-template-columns: auto 1fr; gap: .4vh 1vw; align-items: center;
+    opacity: 0; transform: translateY(12px); transition: opacity .45s ease, transform .45s ease; }
+  .slide.active .loop .tile { opacity: 1; transform: none; }
+  .slide.active .loop .tile:nth-child(2) { transition-delay: .1s; }
+  .slide.active .loop .tile:nth-child(3) { transition-delay: .2s; }
+  .slide.active .loop .tile:nth-child(4) { transition-delay: .3s; }
+  .slide.active .loop .tile:nth-child(5) { transition-delay: .4s; }
+  .slide.active .loop .tile:nth-child(6) { transition-delay: .5s; }
+  .loop .tile .fe { grid-row: span 2; }
+  .loop .tile h3 { margin: 0; font-size: clamp(15px, 1.35vw, 21px); }
+  .loop .tile p { font-size: clamp(12px, 1vw, 15px); }
+  .streak { display: inline-flex; align-items: center; gap: .4em; margin-top: 2.4vh; background: rgba(255,149,0,.12); border: 1px solid rgba(255,149,0,.35);
+    color: #ffb340; border-radius: 999px; padding: .45em 1em; font-weight: 600; font-size: clamp(13px, 1.1vw, 17px); }
+
+  /* Capture ring, like the Rewards tab */
+  .ring { position: relative; width: min(26vw, 340px); aspect-ratio: 1; margin: 0 auto; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring .track { fill: none; stroke: rgba(255,255,255,.1); stroke-width: 18; }
+  .ring .fill { fill: none; stroke: #30D158; stroke-width: 18; stroke-linecap: round; stroke-dasharray: 471.2; stroke-dashoffset: 471.2; transition: stroke-dashoffset 1.6s .3s cubic-bezier(.2,.8,.2,1); }
+  .slide.active .ring .fill { stroke-dashoffset: 327; } /* 30.6% captured */
+  .ring .mid { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .ring .pct { font-size: clamp(44px, 5.4vw, 84px); font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .ring .cap { color: var(--muted); font-size: clamp(13px, 1.1vw, 17px); margin-top: .4em; }
+
+  /* Missed */
+  .counter { font-size: clamp(80px, 13vw, 210px); font-weight: 800; letter-spacing: -.05em; line-height: 1; color: var(--amber); font-variant-numeric: tabular-nums;
+    background: linear-gradient(180deg, #fde7c6, #d9a066); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .stats { display: flex; gap: 1.6vw; margin-top: 4vh; flex-wrap: wrap; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 2vh 1.8vw; min-width: 12vw; }
+  .stat .k { color: var(--dim); font-size: clamp(12px, 1vw, 16px); }
+  .stat .val { font-size: clamp(24px, 2.4vw, 38px); font-weight: 700; margin-top: .3em; font-variant-numeric: tabular-nums; }
+  .bar { height: 14px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; margin-top: 3vh; max-width: 60vw; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--mint); transition: width 1.6s .4s ease; }
+  .slide.active .bar i { width: 30.6%; }
+  .bar-legend { display: flex; justify-content: space-between; max-width: 60vw; color: var(--dim); font-size: clamp(12px, 1vw, 15px); margin-top: .8vh; }
+
+  /* Architecture */
+  .arch { display: grid; grid-template-columns: 1fr auto 1.2fr auto 1fr; align-items: center; gap: 1.4vw; margin-top: 4vh; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 2.4vh 1.4vw; }
+  .box h4 { margin: 0 0 1vh; font-size: clamp(16px, 1.5vw, 24px); }
+  .box p { margin: 0; color: var(--muted); font-size: clamp(12px, 1.05vw, 16px); line-height: 1.5; }
+  .box.core { border-color: rgba(52,211,153,.5); box-shadow: 0 0 40px rgba(52,211,153,.12); }
+  .arrow { color: var(--dim); font-size: clamp(22px, 2.2vw, 34px); }
+  .sidecol { display: grid; gap: 1.4vh; }
+  .formula { margin-top: 5vh; font-family: var(--mono); font-size: clamp(15px, 1.5vw, 24px); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 2vh 1.8vw; color: var(--muted); }
+  .formula b { color: var(--mint); font-weight: 600; }
+
+  /* Tech stack map */
+  .ico { display: inline-block; width: 1em; height: 1em; background: var(--c, #fff);
+    -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; flex: none; }
+  .tools { display: flex; flex-wrap: wrap; gap: .8vh .6vw; }
+  .tool { display: inline-flex; align-items: center; gap: .5em; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+    padding: .55em .8em; font-size: clamp(12px, 1.05vw, 17px); font-weight: 600; white-space: nowrap; }
+  .tool .ico { font-size: 1.5em; }
+  .stackmap { display: grid; grid-template-columns: 1.05fr 7vw 1.05fr 7vw 1fr; align-items: stretch; margin-top: 3vh; }
+  .node { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 2.2vh 1.2vw; display: flex; flex-direction: column; gap: 1.4vh; }
+  .node .lbl { font-size: clamp(11px, .85vw, 13px); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+  .node h4 { margin: 0; font-size: clamp(16px, 1.45vw, 23px); }
+  .node .desc { color: var(--muted); font-size: clamp(12px, .95vw, 15px); line-height: 1.45; margin: 0; }
+  .node.core { border-color: rgba(0,150,136,.6); box-shadow: 0 0 40px rgba(0,150,136,.15); }
+  .engine { border: 1px dashed rgba(52,211,153,.5); border-radius: 12px; padding: 1.2vh .9vw; font-size: clamp(12px, .95vw, 15px); color: var(--muted); }
+  .engine code { color: var(--mint); font-family: var(--mono); }
+  .right-col { display: grid; grid-template-rows: 1fr 1fr; gap: 2vh; }
+  .wire { position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  .wire svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .wire path { fill: none; stroke: #3f3f46; stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .wire path.flow { stroke: var(--mint); stroke-dasharray: 6 10; opacity: .9; }
+  .slide.active .wire path.flow { animation: dash 1.2s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -32; } }
+  .wire .tagline { position: relative; background: var(--bg); color: var(--muted); font-family: var(--mono); font-size: clamp(10px, .8vw, 13px); padding: .3em .5em; border-radius: 6px; text-align: center; line-height: 1.35; }
+  .fallback { display: flex; align-items: center; gap: .6em; border-top: 1px dashed var(--line); padding-top: 1.2vh; color: var(--dim); font-size: clamp(11px, .9vw, 14px); }
+  .fallback .ico { font-size: 1.4em; }
+  .baseline { margin-top: 2.4vh; display: flex; justify-content: space-between; align-items: center; gap: 1.5vw; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 1.4vh 1.4vw; }
+  .baseline .grp { display: flex; align-items: center; gap: .8vw; color: var(--muted); font-size: clamp(12px, 1vw, 16px); }
+
+  /* Demo slide */
+  .urls { display: grid; gap: 1vh; margin-top: 3vh; }
+  .urls a { font-family: var(--mono); color: var(--blue); text-decoration: none; font-size: clamp(13px, 1.2vw, 19px); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1.2vh 1.2vw; display: flex; justify-content: space-between; gap: 1rem; }
+  .urls a:hover { border-color: var(--blue); }
+  .urls a span { color: var(--muted); font-family: var(--font); }
+  .urls a b { font-weight: 500; font-family: var(--font); color: var(--text); }
+
+  /* Chrome */
+  .progress { position: fixed; left: 0; bottom: 0; height: 3px; background: var(--mint); transition: width .4s ease; z-index: 50; }
+  .counter-ui { position: fixed; right: 2vw; bottom: 2vh; color: var(--dim); font-size: 13px; font-variant-numeric: tabular-nums; z-index: 50; }
+  .hint { position: fixed; left: 2vw; bottom: 2vh; color: #3f3f46; font-size: 12px; z-index: 50; }
+  .notes { position: fixed; left: 50%; bottom: 5vh; transform: translateX(-50%); width: min(900px, 90vw); background: rgba(24,24,27,.96); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; color: var(--muted); font-size: 15px; line-height: 1.5; display: none; z-index: 60; }
+  .notes.show { display: block; }
+  .notes b { color: var(--gold); }
+
+  @media (max-width: 800px) {
+    .two, .title-wrap { grid-template-columns: 1fr; gap: 3vh; }
+    .three { grid-template-columns: 1fr; }
+    .arch, .stackmap { grid-template-columns: 1fr; }
+    .wire { min-height: 6vh; }
+    .wire svg { display: none; }
+    .arrow { transform: rotate(90deg); justify-self: center; }
+    .slide { padding: 4vh 16px; overflow-y: auto; justify-content: flex-start; }
+    .stack { width: 70vw; }
+    .loop { grid-template-columns: 1fr; }
+    .ring { width: 60vw; }
+    .phone { height: 60vh; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .01ms !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- 1. Title -->
+  <section class="slide" data-notes="Open strong. One sentence: CardMaxxing tells you which card to use for every purchase, stacks a coupon on top, and shows what the wrong card has cost you.">
+    <div class="title-wrap">
+      <div>
+        <div class="eyebrow">QC Hacknight 2026</div>
+        <h1 style="font-size:clamp(40px,6.2vw,100px)">Card<span class="gold">Maxxing</span></h1>
+        <p class="lead" style="margin-top:3vh">The right card, the best coupon, every purchase. And a receipt for what the wrong card has been costing you.</p>
+        <div class="team">
+          <span class="chip">Omar</span><span class="chip">Mohammad</span><span class="chip">Ayman</span><span class="chip">Nazeef</span>
+        </div>
+      </div>
+      <div class="stack lift">
+        <img src="assets/cards/everyday-debit.svg" alt="">
+        <img src="assets/cards/chase-freedom.svg" alt="">
+        <img src="assets/cards/venture-x.svg" alt="">
+        <img src="assets/cards/chase-sapphire.svg" alt="">
+        <img src="assets/cards/apple-card.svg" alt="">
+        <img class="win" src="assets/cards/amex-gold.svg" alt="Amex Gold">
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Problem -->
+  <section class="slide" data-notes="Most people carry several reward cards and default to one. The value is real, but the decision happens at the register in two seconds.">
+    <div class="eyebrow">The problem</div>
+    <h2>You carry five cards.<br>You use <span class="red">the wrong one</span>.</h2>
+    <p class="lead">Every card has a different multiplier, point value, and network. Nobody does that math at the register, so the debit card comes out and the rewards stay on the table.</p>
+    <div class="three">
+      <div class="tile"><div class="emoji">🧮</div><h3>Too much math</h3><p>4x points at 1.8¢ vs 2x at 1.4¢ vs 5% on one category. In two seconds, at checkout.</p></div>
+      <div class="tile"><div class="emoji">🚫</div><h3>Hidden rules</h3><p>Costco only takes Visa. Target is coded as a discount store, so grocery bonuses don't apply.</p></div>
+      <div class="tile"><div class="emoji">🏷️</div><h3>Coupons live elsewhere</h3><p>The best promo code and the best card are never shown in the same place.</p></div>
+    </div>
+  </section>
+
+  <!-- 3. Solution overview -->
+  <section class="slide" data-notes="Four tabs plus Pay, one engine. Picking the right card pays out coins, confetti, and a streak. Say once, early: cards, stores, coupons and payments are demo data; nothing is charged.">
+    <div class="eyebrow">The solution</div>
+    <h2>One engine. Every way you shop.<br><span class="gold">And it plays like a game.</span></h2>
+    <div class="three" style="grid-template-columns: repeat(4, 1fr)">
+      <div class="tile"><img class="fe" src="../emoji/credit-card.png" alt=""><h3>Wallet + Pay</h3><p>Every card shows what it earns at the store you're in. Hold to pay; coins rain.</p></div>
+      <div class="tile"><img class="fe" src="../emoji/receipt.png" alt=""><h3>Scan</h3><p>Screenshot an online cart. Gemini reads it; we stack coupon + card.</p></div>
+      <div class="tile"><img class="fe" src="../emoji/ticket.png" alt=""><h3>Deals</h3><p>Today's top stacks for meals, clothing, and travel, ranked by dollars back.</p></div>
+      <div class="tile"><img class="fe" src="../emoji/trophy.png" alt=""><h3>Rewards</h3><p>Your capture score, best-card streak, and what the wrong card cost you.</p></div>
+    </div>
+    <p style="margin-top:4vh;color:var(--dim);font-size:clamp(13px,1.1vw,16px)">Demo build: cards, stores, coupons, and payments are simulated. Nothing is charged.</p>
+  </section>
+
+  <!-- 4. Wallet -->
+  <section class="slide" data-notes="Open the Trader Joe's URL. I did not tap anything: it knew where I was and ranked my cards. Amex Gold +$3.06 in green. Tap the card, then the At Trader Joe's tile for the why sheet.">
+    <div class="two">
+      <div>
+        <div class="eyebrow">In store · Intelligent Wallet</div>
+        <h2>It already knows<br>which card to pull.</h2>
+        <p class="lead">Walk into Trader Joe's. CardMaxxing matches your location to the store, and every card in the stack shows what it earns there. The winner wears green.</p>
+        <div class="drawer">
+          <div class="hd">WHY THIS CARD WON</div>
+          <div class="row"><span>✔ Network</span><span>Amex accepted here</span></div>
+          <div class="row"><span>✔ Category</span><span>MCC 5411 · Supermarket · 4x</span></div>
+          <div class="row"><span>✔ Real yield</span><span>4x × 1.8¢ = <b class="accent">7.2%</b></span></div>
+          <span class="pill">+$3.06 back · $1.87 more than Venture X</span>
+        </div>
+      </div>
+      <div class="phone"><img src="assets/wallet.png" alt="Wallet at Trader Joe's: Amex Gold on top with a green +$3.06"></div>
+    </div>
+  </section>
+
+  <!-- 5. Pay -->
+  <section class="slide" data-notes="Tap Pay. The best card for the store is already on top. Press and hold the circle about a second: the ring fills, green check, chime, coins, +$3.06 back. Letting go early cancels, by design. Pay closes itself.">
+    <div class="two">
+      <div>
+        <div class="eyebrow">In store · Hold to pay</div>
+        <h2>Hold. Done.<br><span class="gold">Coins.</span></h2>
+        <p class="lead">Pay opens with the best card for the store on top and the rest in a pile underneath. Hold the circle: the ring fills, then a check, a chime, and a shower of coins.</p>
+        <div class="holdring">
+          <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="42"/><circle class="fill" cx="50" cy="50" r="42"/><circle class="dot" cx="50" cy="50" r="30"/><polyline class="tick" points="38,50 47,59 63,42" transform="rotate(90 50 50)"/></svg>
+          <div class="msg">Hold to pay <b>+$3.06 back</b></div>
+        </div>
+        <p style="margin-top:3vh;color:var(--dim);font-size:clamp(12px,1vw,15px)">Animation, sound, and haptics only. No real NFC, no real charge.</p>
+      </div>
+      <div class="pay-wrap">
+        <div class="phone"><img src="assets/paid.png" alt="Pay after paying: Amex Gold, +$3.06 back, Done, coins falling"></div>
+        <div class="rain" id="rain"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Costco -->
+  <section class="slide" data-notes="Costco only takes Visa. The engine checks acceptance before it ranks anything, so it never recommends a card that would be declined.">
+    <div class="two">
+      <div>
+        <div class="eyebrow">Rules first, then rewards</div>
+        <h2>The "best" card<br>gets <span class="red">rejected</span>.</h2>
+        <p class="lead">At Costco, Amex and Mastercard don't work. CardMaxxing filters by network before ranking, so it never recommends a card the terminal will decline.</p>
+        <ul class="bullets">
+          <li><b>Network check</b> removes disqualified cards</li>
+          <li><b>MCC check</b> applies the right category bonus</li>
+          <li><b>Yield ranking</b> picks the highest real return</li>
+        </ul>
+      </div>
+      <div>
+        <div class="rank">
+          <div class="r win"><img src="assets/cards/chase-freedom.svg" alt=""><span class="nm">Chase Freedom</span><span class="tag">+$9.37 · 5%</span></div>
+          <div class="r"><img src="assets/cards/venture-x.svg" alt=""><span class="nm">Venture X</span><span class="tag">2.8%</span></div>
+          <div class="r"><img src="assets/cards/chase-sapphire.svg" alt=""><span class="nm">Chase Sapphire</span><span class="tag">1.5%</span></div>
+          <div class="r out"><img src="assets/cards/amex-gold.svg" alt=""><span class="nm">Amex Gold</span><span class="tag">✖ Not accepted · Amex</span></div>
+          <div class="r out"><img src="assets/cards/apple-card.svg" alt=""><span class="nm">Apple Card</span><span class="tag">✖ Not accepted · Mastercard</span></div>
+        </div>
+        <p style="color:var(--dim);margin-top:1.6vh;font-size:clamp(12px,1vw,15px)">Costco · $187.40 basket · Visa-only terminals</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Triple stack -->
+  <section class="slide" data-notes="Try the sample cart. SAVE15 takes $15 off, Apple Card earns 3% on the remaining $85, total $17.55 back. Then I used a different card, Everyday Debit: Logged, $2.55 missed. Tap See Rewards.">
+    <div class="two">
+      <div>
+        <div class="eyebrow">Online · The Triple Stack</div>
+        <h2>Screenshot your cart.<br>Get <span class="accent">$17.55</span> back.</h2>
+        <div class="layers">
+          <div class="layer"><span class="n">1</span><div><div class="t">Coupon <span class="code">SAVE15</span></div><div class="s">15% off $100 Nike cart</div></div><span class="v">−$15.00</span></div>
+          <div class="layer"><span class="n">2</span><div><div class="t">Card · Apple Card</div><div class="s">3% at Nike, on the $85 you actually pay</div></div><span class="v">+$2.55</span></div>
+          <div class="layer total"><span class="n">3</span><div><div class="t">Total value back</div><div class="s">17.6% of $100.00</div></div><span class="v">$17.55</span></div>
+        </div>
+        <p style="color:var(--dim);margin-top:2vh;font-size:clamp(12px,1vw,15px)">Gemini reads the merchant, items, and subtotal. Log it with the best card: party popper, confetti, coins. Log it with debit: "Logged · $2.55 missed."</p>
+      </div>
+      <div class="phone scroll"><img src="assets/scan.png" alt="Scan: Nike sample cart, $17.55 back, logged with debit, $2.55 missed"></div>
+    </div>
+  </section>
+
+  <!-- 8. Deals -->
+  <section class="slide" data-notes="Open Deals, show Meals, Clothing, and Travel. Tap one, then Open in Scan for the full breakdown.">
+    <div class="two">
+      <div>
+        <div class="eyebrow">Daily feed · Maximized Deals</div>
+        <h2>The best stacks,<br>already done for you.</h2>
+        <p class="lead">Meals, clothing, and travel, ranked by dollars back on a typical order with the cards in <i>your</i> wallet. Each feed crowns a top stack today.</p>
+        <ul class="bullets">
+          <li><img class="logo" src="../logos/hm.webp" alt=""><b>H&amp;M</b>: <span class="code">HM20</span> + Venture X = $13.34 back · 22%</li>
+          <li><img class="logo" src="../logos/lululemon.webp" alt=""><b>Lululemon</b>: <span class="code">LULU20</span> + Venture X = $23.02 · 18%</li>
+          <li><img class="logo" src="../logos/nike.webp" alt=""><b>Nike</b>: <span class="code">SAVE15</span> + Apple Card = $17.55 · 18%</li>
+        </ul>
+      </div>
+      <div class="phone"><img src="assets/deals.png" alt="Deals screen, clothing feed"></div>
+    </div>
+  </section>
+
+  <!-- 9. Game loop -->
+  <section class="slide" data-notes="This is the big change: picking the right card is now a game. Every best-card purchase pays out coins and confetti and grows your streak; at 3, 5, and 10 in a row you get a bigger burst and a fanfare. Rewards scores you and names the one fix worth the most.">
+    <div class="two">
+      <div>
+        <div class="eyebrow">Gamified · The reward loop</div>
+        <h2>Saving money should<br>feel like <span class="accent">winning</span>.</h2>
+        <div class="loop">
+          <div class="tile"><img class="fe" src="../emoji/coin.png" alt=""><h3>Coin shower</h3><p>Every best-card payment rains 3D coins and confetti.</p></div>
+          <div class="tile"><img class="fe" src="../emoji/fire.png" alt=""><h3>Best-card streak</h3><p>Pay with the card we pick to keep the flame alive.</p></div>
+          <div class="tile"><img class="fe" src="../emoji/party-popper.png" alt=""><h3>Milestones</h3><p>3, 5, 10 in a row: a bigger burst and a fanfare.</p></div>
+          <div class="tile"><img class="fe" src="../emoji/bullseye.png" alt=""><h3>Maximized</h3><p>How many purchases got every cent they could.</p></div>
+          <div class="tile"><img class="fe" src="../emoji/money-bag.png" alt=""><h3>Capture score</h3><p>A ring: the share of possible rewards you kept.</p></div>
+          <div class="tile"><img class="fe" src="../emoji/light-bulb.png" alt=""><h3>Your biggest fix</h3><p>"Use Amex Gold for groceries": one tip, most money.</p></div>
+        </div>
+        <span class="streak"><img class="fe sm" src="../emoji/fire.png" alt=""> 3 best-card picks in a row</span>
+      </div>
+      <div class="phone scroll"><img src="assets/rewards.png" alt="Rewards: capture ring, streak, biggest fix, daily chart, purchases"></div>
+    </div>
+  </section>
+
+  <!-- 10. Rewards: the hook -->
+  <section class="slide" data-notes="The emotional hook. Fresh seed: $69.75 left on the table from 30 purchases, earned $30.80 of $100.55 possible. Same purchases, same wallet. The only difference is which card came out.">
+    <div class="two">
+      <div>
+        <div class="eyebrow">The hook · Rewards</div>
+        <h2 style="margin-bottom:1vh">In 30 purchases, you left</h2>
+        <div class="counter" id="missed">$0.00</div>
+        <p class="lead" style="margin-top:1vh">on the table. Same purchases, same wallet. Only the card was different.</p>
+        <div class="stats">
+          <div class="stat"><div class="k">Earned</div><div class="val accent">$30.80</div></div>
+          <div class="stat"><div class="k">Best possible</div><div class="val">$100.55</div></div>
+          <div class="stat"><div class="k">Left on the table</div><div class="val red">$69.75</div></div>
+        </div>
+      </div>
+      <div class="ring">
+        <svg viewBox="0 0 168 168" aria-hidden="true"><circle class="track" cx="84" cy="84" r="75"/><circle class="fill" cx="84" cy="84" r="75"/></svg>
+        <div class="mid"><div><div class="pct" id="pct">0%</div><div class="cap">captured</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. Architecture -->
+  <section class="slide" data-notes="One pure-function rewards engine powers every screen. Offline fallbacks for Gemini and SQLite mean the demo never dies on stage.">
+    <div class="eyebrow">How it works</div>
+    <h2>One pure rewards engine,<br>four screens.</h2>
+    <div class="arch">
+      <div class="box"><h4>React PWA</h4><p>Vite + TypeScript, Tailwind, Motion springs, confetti and coin showers, Web Audio chime and fanfare, haptics. Installs to your home screen.</p></div>
+      <div class="arrow">→</div>
+      <div class="box core"><h4>FastAPI + Engine</h4><p>Network filter → MCC category → yield ranking. Triple Stack and missed-cashback math as pure, tested functions.</p></div>
+      <div class="arrow">→</div>
+      <div class="sidecol">
+        <div class="box"><h4>Gemini</h4><p>Cart screenshot parsing, simulated coupons for unknown stores.</p></div>
+        <div class="box"><h4>Tiger Data</h4><p>Postgres + TimescaleDB hypertable of every purchase.</p></div>
+      </div>
+    </div>
+    <div class="formula">yield % = <b>multiplier × ¢ per point</b> &nbsp;·&nbsp; missed = <b>best card value − card used value</b></div>
+  </section>
+
+  <!-- 12. Tech stack -->
+  <section class="slide" data-notes="The phone only talks to one origin: /api. Vite proxies it in dev, Vercel routes it in production. FastAPI hands every request to the pure engine, calls Gemini only for screenshots and unknown stores, and writes purchases to Tiger Data. If Gemini or the database is unreachable, labelled offline fallbacks keep the demo alive.">
+    <div class="eyebrow">Tech stack</div>
+    <h2 style="margin-bottom:0">How the pieces connect.</h2>
+    <div class="stackmap">
+      <div class="node">
+        <div class="lbl">Client · phone browser PWA</div>
+        <h4>Frontend</h4>
+        <div class="tools">
+          <span class="tool"><i class="ico" style="--c:#61DAFB;--i:url(assets/icons/react.svg)"></i>React 19</span>
+          <span class="tool"><i class="ico" style="--c:#3178C6;--i:url(assets/icons/typescript.svg)"></i>TypeScript</span>
+          <span class="tool"><i class="ico" style="--c:#06B6D4;--i:url(assets/icons/tailwindcss.svg)"></i>Tailwind 4</span>
+          <span class="tool"><i class="ico" style="--c:#FFF312;--i:url(assets/icons/framer.svg)"></i>Motion</span>
+          <span class="tool"><i class="ico" style="--c:#9499FF;--i:url(assets/icons/vite.svg)"></i>Vite</span>
+          <span class="tool"><img class="fe sm" src="../emoji/party-popper.png" alt="">canvas-confetti</span>
+        </div>
+        <p class="desc">Wallet, Scan, Deals, Rewards, Pay. Coin and confetti bursts, streak fanfare, haptics, geolocation, iPhone preview frame.</p>
+      </div>
+
+      <div class="wire">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none"><path class="flow" d="M0 50 H100"/></svg>
+        <span class="tagline">/api<br>JSON</span>
+      </div>
+
+      <div class="node core">
+        <div class="lbl">Server · API</div>
+        <h4>Backend</h4>
+        <div class="tools">
+          <span class="tool"><i class="ico" style="--c:#FFD43B;--i:url(assets/icons/python.svg)"></i>Python 3.12</span>
+          <span class="tool"><i class="ico" style="--c:#05998B;--i:url(assets/icons/fastapi.svg)"></i>FastAPI</span>
+          <span class="tool"><i class="ico" style="--c:#E92063;--i:url(assets/icons/pydantic.svg)"></i>Pydantic</span>
+        </div>
+        <div class="engine"><code>engine.py</code> pure rewards math: network filter → MCC category → yield ranking → Triple Stack → missed cash back</div>
+      </div>
+
+      <div class="wire">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path class="flow" d="M0 50 C 50 50, 50 25, 100 25"/>
+          <path class="flow" d="M0 50 C 50 50, 50 75, 100 75"/>
+        </svg>
+        <span class="tagline" style="position:absolute;top:12%">image →<br>items</span>
+        <span class="tagline" style="position:absolute;bottom:12%">SQL</span>
+      </div>
+
+      <div class="right-col">
+        <div class="node">
+          <div class="lbl">AI</div>
+          <div class="tools"><span class="tool"><i class="ico" style="--c:#A98BE0;--i:url(assets/icons/googlegemini.svg)"></i>Gemini 2.5 Flash</span></div>
+          <p class="desc">Reads cart screenshots; simulates coupons for unknown stores.</p>
+        </div>
+        <div class="node">
+          <div class="lbl">Data · Tiger Data</div>
+          <div class="tools">
+            <span class="tool"><i class="ico" style="--c:#6E93F0;--i:url(assets/icons/postgresql.svg)"></i>Postgres</span>
+            <span class="tool"><i class="ico" style="--c:#FDB515;--i:url(assets/icons/timescale.svg)"></i>TimescaleDB</span>
+          </div>
+          <div class="fallback"><i class="ico" style="--c:#4AA3DF;--i:url(assets/icons/sqlite.svg)"></i>SQLite for local dev</div>
+        </div>
+      </div>
+    </div>
+    <div class="baseline">
+      <div class="grp"><i class="ico" style="--c:#fff;--i:url(assets/icons/vercel.svg);font-size:1.4em"></i><span><b style="color:var(--text)">Vercel</b> · one project: FastAPI + Vite, same origin</span></div>
+      <div class="grp">
+        <span class="tool"><i class="ico" style="--c:#0A9EDC;--i:url(assets/icons/pytest.svg)"></i>pytest</span>
+        <span class="tool"><i class="ico" style="--c:#FCC72B;--i:url(assets/icons/vitest.svg)"></i>Vitest</span>
+        <span>engine, API &amp; screen tests</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13. Live demo -->
+  <section class="slide" data-notes="Switch to the app. The ?preview links show it inside an iPhone frame; double-click the side button to open Pay. Script: Trader Joe's → hold to pay, coins → Costco → Scan sample cart, log with debit → Rewards → Deals.">
+    <div class="two">
+      <div>
+        <div class="eyebrow">Live demo</div>
+        <h2>Let's go shopping.</h2>
+        <ul class="bullets">
+          <li><b>Trader Joe's</b>: Amex Gold +$3.06, hold to pay, coins rain</li>
+          <li><b>Costco</b>: Amex "Not accepted", Chase Freedom wins</li>
+          <li><b>Scan</b>: Nike cart, log it with debit, $2.55 missed</li>
+          <li><b>Rewards</b>: left on the table climbs to $72.30</li>
+        </ul>
+      </div>
+      <div class="urls">
+        <a href="/?preview&amp;geo=40.73342,-73.98788" target="_blank"><b><img class="logo" src="../logos/trader-joes.webp" alt="">Trader Joe's</b><span>Amex Gold · 7.2%</span></a>
+        <a href="/?preview&amp;geo=40.79564,-73.93088" target="_blank"><b><img class="logo" src="../logos/costco.webp" alt="">Costco</b><span>Chase Freedom · 5%</span></a>
+        <a href="/?preview&amp;geo=40.71453,-74.01127" target="_blank"><b><img class="logo" src="../logos/target.webp" alt="">Target</b><span>Venture X · 2.8%</span></a>
+        <a href="/?preview&amp;geo=40.75974,-73.97678" target="_blank"><b><img class="logo" src="../logos/nike.webp" alt="">Nike</b><span>Apple Card · 3%</span></a>
+        <p style="margin:.6vh 0 0;color:var(--dim);font-size:clamp(12px,1vw,15px)">Opens the phone app in an iPhone frame. On a real phone, drop <span class="code">preview&amp;</span>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14. Next -->
+  <section class="slide" data-notes="Be honest about scope, then show the path to a real product.">
+    <div class="eyebrow">What's next</div>
+    <h2>From demo to daily driver.</h2>
+    <div class="three" style="grid-template-columns: repeat(4, 1fr)">
+      <div class="tile"><img class="fe" src="../emoji/credit-card.png" alt=""><h3>Real card linking</h3><p>Pull actual cards and reward rates via account aggregation, not mock data.</p></div>
+      <div class="tile"><img class="fe" src="../emoji/airplane.png" alt=""><h3>Any store, anywhere</h3><p>Real merchant and MCC lookup beyond our 10 demo stores in NYC.</p></div>
+      <div class="tile"><img class="fe" src="../emoji/ticket.png" alt=""><h3>Verified offers</h3><p>Live coupon and card-linked offer feeds in place of simulated codes.</p></div>
+      <div class="tile"><img class="fe" src="../emoji/trophy.png" alt=""><h3>Challenges</h3><p>Weekly goals, badges, and friend leaderboards on top of the streak.</p></div>
+    </div>
+  </section>
+
+  <!-- 15. Thanks -->
+  <section class="slide" data-notes="Thank the judges, invite questions.">
+    <div class="title-wrap">
+      <div>
+        <div class="eyebrow">Thank you</div>
+        <h1>Stop leaving<br><span class="accent">money</span> at<br>the register.</h1>
+        <div class="team">
+          <span class="chip live">CardMaxxing</span><span class="chip">Omar</span><span class="chip">Mohammad</span><span class="chip">Ayman</span><span class="chip">Nazeef</span>
+        </div>
+        <p style="margin-top:3vh;color:var(--muted);font-size:clamp(16px,1.5vw,22px)">Questions?</p>
+      </div>
+      <div class="stack lift">
+        <img src="assets/cards/everyday-debit.svg" alt="">
+        <img src="assets/cards/amex-gold.svg" alt="">
+        <img src="assets/cards/venture-x.svg" alt="">
+        <img src="assets/cards/chase-sapphire.svg" alt="">
+        <img src="assets/cards/apple-card.svg" alt="">
+        <img class="win" src="assets/cards/chase-freedom.svg" alt="Chase Freedom">
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="progress" id="progress"></div>
+<div class="counter-ui" id="count"></div>
+<div class="hint">← → to navigate · N for notes · F for fullscreen</div>
+<div class="notes" id="notes"></div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const progress = document.getElementById('progress');
+  const count = document.getElementById('count');
+  const notes = document.getElementById('notes');
+  let i = 0;
+
+  function fromHash() {
+    const n = parseInt(location.hash.slice(1), 10);
+    return Number.isFinite(n) ? Math.min(Math.max(n - 1, 0), slides.length - 1) : 0;
+  }
+
+  function show(n) {
+    i = Math.min(Math.max(n, 0), slides.length - 1);
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    progress.style.width = ((i + 1) / slides.length * 100) + '%';
+    count.textContent = (i + 1) + ' / ' + slides.length;
+    notes.innerHTML = '<b>Speaker notes:</b> ' + (slides[i].dataset.notes || '');
+    history.replaceState(null, '', '#' + (i + 1));
+    if (slides[i].querySelector('#missed')) rollMissed();
+    if (slides[i].querySelector('#rain')) coinRain();
+  }
+
+  // The app's coin shower, replayed each time the Pay slide opens.
+  function coinRain() {
+    const rain = document.getElementById('rain');
+    rain.innerHTML = '';
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    for (let k = 0; k < 16; k++) {
+      const c = document.createElement('img');
+      c.src = '../emoji/coin.png';
+      c.alt = '';
+      c.style.left = (Math.random() * 92) + '%';
+      c.style.animationDelay = (1.6 + Math.random() * .7).toFixed(2) + 's';
+      c.style.animationDuration = (1.8 + Math.random() * 1.2).toFixed(2) + 's';
+      rain.appendChild(c);
+    }
+  }
+
+  function rollMissed() {
+    const el = document.getElementById('missed');
+    const pct = document.getElementById('pct');
+    const target = 69.75, dur = 1600, t0 = performance.now();
+    function step(t) {
+      const p = Math.min((t - t0) / dur, 1);
+      const e = 1 - Math.pow(1 - p, 3);
+      el.textContent = '$' + (target * e).toFixed(2);
+      pct.textContent = Math.round(31 * e) + '%';
+      if (p < 1 && slides[i].contains(el)) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(i + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'n') notes.classList.toggle('show');
+    else if (e.key.toLowerCase() === 'f') {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  document.getElementById('deck').addEventListener('click', (e) => {
+    if (e.target.closest('a')) return;
+    show(e.clientX > innerWidth / 3 ? i + 1 : i - 1);
+  });
+
+  let tx = null;
+  addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchend', (e) => {
+    if (tx === null) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) show(dx < 0 ? i + 1 : i - 1);
+    tx = null;
+  });
+
+  show(fromHash());
+</script>
+</body>
+</html>
