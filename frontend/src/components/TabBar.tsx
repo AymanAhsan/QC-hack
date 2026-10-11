@@ -1,51 +1,54 @@
-import { TABS, useNav, type Tab } from '../navigation'
+// Navigation. Phone: a floating glass capsule (iOS 26 tab bar) with Pay in its
+// own circle beside it. Laptop: a sidebar with the same tabs and Pay at the bottom.
 
-const ICONS: Record<Tab, string> = {
-  wallet: 'M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18M7 15h4',
-  scan: 'M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10',
-  deals: 'M20 12l-8 8-8-8V4h8zM8 8h.01',
-  missed: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+import { motion, type TargetAndTransition } from 'motion/react'
+import { ChartDonutIcon, ContactlessPaymentIcon, ScanIcon, TagIcon, WalletIcon, type Icon } from '@phosphor-icons/react'
+import { TABS, type Tab } from '../navigation'
+
+/** How each tab looks. The "missed" tab shows what you earned, so it reads as Rewards. */
+const TAB_UI: Record<Tab, { label: string; icon: Icon }> = {
+  wallet: { label: 'Wallet', icon: WalletIcon },
+  scan: { label: 'Scan', icon: ScanIcon },
+  deals: { label: 'Deals', icon: TagIcon },
+  missed: { label: 'Rewards', icon: ChartDonutIcon },
 }
 
-const HINTS: Record<Tab, string> = {
-  wallet: 'Best card in store',
-  scan: 'Cart + coupon stack',
-  deals: "Today's best stacks",
-  missed: 'Rewards left behind',
+// Skiper 99's approach, a one-shot keyframe per icon when its tab is chosen.
+const ICON_POP: Record<Tab, TargetAndTransition> = {
+  wallet: { y: [0, -5, 0], transition: { duration: 0.45, ease: [0.23, 1, 0.32, 1] } },
+  scan: { scale: [1, 0.78, 1.1, 1], transition: { duration: 0.45 } },
+  deals: { rotate: [0, -15, 5, -2, 0], transition: { duration: 0.5 } },
+  missed: { rotate: [0, -40, 12, 0], transition: { duration: 0.55 } },
 }
+const ICON_REST: TargetAndTransition = { y: 0, scale: 1, rotate: 0 }
 
-function Icon({ tab }: { tab: Tab }) {
+const pill = 'absolute inset-0 rounded-full bg-white/[0.13] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_0_0_0.5px_rgba(255,255,255,0.08)]'
+const pillSpring = { type: 'spring', visualDuration: 0.42, bounce: 0.18 } as const
+
+export function TabBar({ tab, onSelect }: { tab: Tab; onSelect: (tab: Tab) => void }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={ICONS[tab]} />
-    </svg>
-  )
-}
-
-/** Phone and tablet: bottom tab bar. Hidden on desktop, where SideNav takes over. */
-export function TabBar() {
-  const { tab, setTab } = useNav()
-  return (
-    <nav
-      aria-label="Main"
-      className="shrink-0 border-t border-white/10 bg-black/85 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] lg:hidden"
-    >
-      <ul className="mx-auto flex max-w-md">
-        {TABS.map(({ id, label }) => {
-          const active = id === tab
+    <nav aria-label="Main" className="n-glass-bar absolute left-4 right-[86px] bottom-[var(--n-bar-bottom)] z-20 h-[62px] rounded-full p-1">
+      <ul className="flex h-full">
+        {TABS.map(({ id }) => {
+          const { label, icon: I } = TAB_UI[id]
+          const active = tab === id
           return (
-            <li key={id} className="flex-1">
-              <button
+            <li key={id} className="relative flex-1">
+              {active ? <motion.span layoutId="tab-pill" aria-hidden className={pill} transition={pillSpring} /> : null}
+              <motion.button
                 type="button"
-                onClick={() => setTab(id)}
+                onClick={() => onSelect(id)}
                 aria-current={active ? 'page' : undefined}
-                className={`flex w-full flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-sky-400 ${
-                  active ? 'text-white' : 'text-white/45 hover:text-white/70'
+                whileTap={{ scale: 0.94 }}
+                className={`relative flex h-full w-full flex-col items-center justify-center gap-[3px] rounded-full text-[10px] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white/70 ${
+                  active ? 'text-white' : 'text-[rgba(235,235,245,0.6)]'
                 }`}
               >
-                <Icon tab={id} />
+                <motion.span className="grid" initial={false} animate={active ? ICON_POP[id] : ICON_REST}>
+                  <I size={24} weight={active ? 'fill' : 'regular'} />
+                </motion.span>
                 {label}
-              </button>
+              </motion.button>
             </li>
           )
         })}
@@ -54,44 +57,64 @@ export function TabBar() {
   )
 }
 
-/** Desktop: left sidebar with the same four destinations. */
-export function SideNav() {
-  const { tab, setTab } = useNav()
+/** Pay sits apart from the tabs, the way iOS 26 floats its search tab in its own circle: it's an action, not a place. */
+export function PayButton({ onClick }: { onClick: () => void }) {
   return (
-    <nav aria-label="Main" className="hidden w-64 shrink-0 flex-col border-r border-white/10 bg-[#0a0a0a] px-4 py-6 lg:flex">
-      <div className="mb-8 flex items-center gap-3 px-2">
-        <img src="/icon.svg" alt="" className="h-9 w-9 rounded-xl" />
-        <div>
-          <p className="text-lg font-bold tracking-tight">CardMax</p>
-          <p className="text-xs text-white/45">Credit card optimizer</p>
-        </div>
+    <motion.button
+      type="button"
+      onClick={onClick}
+      whileTap={{ scale: 0.94 }}
+      transition={{ type: 'spring', duration: 0.25, bounce: 0 }}
+      className="n-glass-bar absolute right-4 bottom-[var(--n-bar-bottom)] z-20 flex size-[62px] flex-col items-center justify-center gap-[3px] rounded-full text-[10px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-white/70"
+    >
+      <ContactlessPaymentIcon size={24} weight="regular" />
+      Pay
+    </motion.button>
+  )
+}
+
+/** Laptop: the tabs as a sidebar, with Pay at the bottom. */
+export function SideNav({ tab, onSelect, onPay }: { tab: Tab; onSelect: (tab: Tab) => void; onPay: () => void }) {
+  return (
+    <nav aria-label="Main" className="flex w-[248px] shrink-0 flex-col border-r-[0.5px] border-white/10 px-3 pb-5 pt-6">
+      <div className="flex items-center gap-2.5 px-3 pb-7">
+        <img src="/icon.svg" alt="" width={30} height={30} className="rounded-[8px] outline-1 -outline-offset-1 outline-white/10" />
+        <span className="font-[family-name:var(--font-sf-rounded)] text-[20px] font-bold">CardMax</span>
       </div>
       <ul className="space-y-1">
-        {TABS.map(({ id, label }) => {
-          const active = id === tab
+        {TABS.map(({ id }) => {
+          const { label, icon: I } = TAB_UI[id]
+          const active = tab === id
           return (
-            <li key={id}>
+            <li key={id} className="relative">
+              {active ? <motion.span layoutId="side-pill" aria-hidden className={`${pill} rounded-[14px]`} transition={pillSpring} /> : null}
               <button
                 type="button"
-                onClick={() => setTab(id)}
+                onClick={() => onSelect(id)}
                 aria-current={active ? 'page' : undefined}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-sky-400 ${
-                  active ? 'bg-white/10 text-white' : 'text-white/55 hover:bg-white/5 hover:text-white/85'
+                className={`relative flex h-11 w-full items-center gap-3 rounded-[14px] px-3 text-[15px] font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-white/70 ${
+                  active ? 'text-white' : 'text-[rgba(235,235,245,0.6)] hover:text-white'
                 }`}
               >
-                <Icon tab={id} />
-                <span>
-                  <span className="block text-sm font-semibold">{label}</span>
-                  <span className="block text-xs text-white/40">{HINTS[id]}</span>
-                </span>
+                <motion.span className="grid" initial={false} animate={active ? ICON_POP[id] : ICON_REST}>
+                  <I size={22} weight={active ? 'fill' : 'regular'} />
+                </motion.span>
+                {label}
               </button>
             </li>
           )
         })}
       </ul>
-      <p className="mt-auto rounded-xl border border-amber-300/20 bg-amber-300/5 px-3 py-2.5 text-xs leading-relaxed text-amber-100/70">
-        Demo app. Cards, stores, coupons, payments, and history are simulated. No real card is ever charged.
-      </p>
+      <span className="flex-1" />
+      <motion.button
+        type="button"
+        onClick={onPay}
+        whileTap={{ scale: 0.97 }}
+        className="n-glass flex h-12 items-center justify-center gap-2 rounded-full text-[17px] font-semibold focus-visible:outline-2 focus-visible:outline-white/70"
+      >
+        <ContactlessPaymentIcon size={22} />
+        Pay
+      </motion.button>
     </nav>
   )
 }

@@ -1,30 +1,215 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sf: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sf-rounded: ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif;
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* `wide:` styles apply in the laptop layout only, never inside the phone preview,
+   whatever the window's width (the layout is set on the app's root element). */
+@custom-variant wide (&:where([data-layout='wide'] *));
+
+/* No double-tap zoom on controls. Gesture surfaces override with touch-action: none. */
+button,
+a,
+input,
+label,
+[role='button'],
+[role='tab'],
+[role='radio'] {
+  touch-action: manipulation;
 }
 
 html,
 body,
 #root {
   height: 100%;
-  background: #000;
-  color: #fff;
 }
 
 body {
   margin: 0;
+  background: oklch(0.19 0.008 265);
+  color: #fff;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+/* The app's root element (App.tsx Screen). clip, not hidden: a hidden box is still a
+   scroll container, so when a sheet that's sliding in from below takes focus, the
+   browser scrolls the whole screen up to it. */
+.device {
+  position: relative;
+  overflow: clip;
+  isolation: isolate;
+}
+
+/* ---------------------------------------------------------------- preview frame */
+
+/* A box-shadow, not a filter: a filter here would become the backdrop root for the
+   app's glass and repaint every frame. */
+.iphone {
+  flex: none;
+  transform-origin: center center;
+  border-radius: 68px;
+  box-shadow: 0 40px 80px -20px rgb(0 0 0 / 0.7);
+}
+.status-bar {
+  pointer-events: none;
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 60;
+  /* Two ears either side of the 160px notch; the time and the icons each centre in
+     theirs, level with the notch's midline. */
+  display: grid;
+  grid-template-columns: 1fr 160px 1fr;
+  align-items: center;
+  justify-items: center;
+  height: 31px;
+  padding-top: 1px;
+  font: 600 16px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  letter-spacing: -0.2px;
+}
+.status-icons {
+  grid-column: 3;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.home-indicator {
+  pointer-events: none;
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  z-index: 60;
+  width: 134px;
+  height: 5px;
+  border-radius: 99px;
+  transform: translateX(-50%);
+  opacity: 0.9;
+}
+/* The frame's side button (iphone-14.css .device-power) is clickable: a double-click
+   opens Pay. The visible button is 3px wide, so the hit area extends outward. */
+.side-button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: translate 120ms ease-out;
+}
+.side-button::before {
+  content: '';
+  position: absolute;
+  inset: -6px -22px -6px -18px;
+}
+.side-button:active {
+  translate: -1px 0;
+}
+.side-button:focus-visible {
+  outline: 2px solid rgb(255 255 255 / 0.7);
+  outline-offset: 3px;
+}
+
+.confetti-canvas {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  width: 100%;
+  height: 100%;
+}
+
+/* Surfaces: Liquid Glass on floating controls and flat translucent panels for
+   in-flow content, all on one near-black graphite background. The glass recipe is
+   layered CSS (blur + saturate, sheen, rim light) because SVG refraction only
+   renders in Chromium; this version looks the same in iPhone Safari. */
+
+@layer components {
+  /* ---------------------------------------------------------------- glass */
+
+  /* Floating controls over scrolling content: real backdrop blur. Never nest glass
+     in glass, and never animate opacity, filter, or mask on a wrapper of glass:
+     either one makes the wrapper the backdrop root and the blur goes blank. */
+  .n-glass {
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.03) 50%, rgb(255 255 255 / 0.06)),
+      rgb(255 255 255 / 0.08);
+    -webkit-backdrop-filter: blur(16px) saturate(150%) brightness(1.04);
+    backdrop-filter: blur(16px) saturate(150%) brightness(1.04);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.3),
+      inset 0 0 0 0.5px rgb(255 255 255 / 0.14),
+      inset 0 -1px 1px rgb(255 255 255 / 0.06),
+      0 10px 30px -10px rgb(0 0 0 / 0.55);
+    transition: background-color 150ms ease;
+  }
+  .n-glass:active,
+  .n-glass[data-popup-open] {
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.06) 50%, rgb(255 255 255 / 0.1)),
+      rgb(255 255 255 / 0.16);
+  }
+
+  /* The tab bar: a darker, slightly heavier glass so labels stay legible over anything. */
+  .n-glass-bar {
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.02) 50%, rgb(255 255 255 / 0.04)),
+      rgb(18 18 22 / 0.7);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.22),
+      inset 0 0 0 0.5px rgb(255 255 255 / 0.12),
+      0 16px 40px -12px rgb(0 0 0 / 0.7);
+  }
+
+  /* In-flow content (grouped lists, cards): a flat translucent layer. The background
+     is flat, so a backdrop blur would add cost and nothing visible. */
+  .n-panel {
+    background: rgb(255 255 255 / 0.07);
+    box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.06);
+  }
+
+  /* Sheets and menus float over everything: dark glass. */
+  .n-sheet {
+    background: rgb(30 30 34 / 0.82);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.16),
+      inset 0 0 0 0.5px rgb(255 255 255 / 0.08);
+  }
+  /* "Reading the screenshot…": a light sweep through the active step's label. */
+  .n-shimmer {
+    color: transparent;
+    background: linear-gradient(100deg, rgb(255 255 255 / 0.5) 38%, #fff 50%, rgb(255 255 255 / 0.5) 62%) 0 0 / 260% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: n-shimmer 1.7s linear infinite;
+  }
+
+  /* A grouped list inside a sheet. */
+  .n-well {
+    background: rgb(255 255 255 / 0.07);
+    box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.06);
   }
 }
+
+@keyframes n-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -160% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .n-shimmer {
+    animation: none;
+    color: #fff;
+    background: none;
+  }
+}
+

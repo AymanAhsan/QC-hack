@@ -1,456 +1,385 @@
-// Wallet: the in-store flow. Owner: Yousef.
-//
-//   idle ──(pick store)──► located ──(press & hold)──► scan ──600 ms──► read
-//                            ▲   ▲                       │ release        │ 1,000 ms after press
-//                            │   └───────────────────────┘ cancels        ▼
-//                            └──(done)── receipt ◄──900 ms── success (chime, vibrate, POST)
-//
-// GET /api/wallet + /api/locations on mount, GET /api/recommend per store,
-// POST /api/transactions on success. Payments are simulated only.
-//
-// The store comes from the startup location check (location.tsx): once a store
-// is detected the screen arrives there by itself. The picker stays as the manual
-// override and the demo fallback.
+import { useMemo, useState } from 'react'
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
+import { Menu } from '@base-ui/react/menu'
+import { CaretLeftIcon, DotsThreeIcon, NavigationArrowIcon, PlusIcon, XIcon } from '@phosphor-icons/react'
+import Tilt from 'react-parallax-tilt'
+import { TextMorph } from 'torph/react'
+import type { Card } from '../../types'
+import type { Session } from '../../session'
+import { useFrame, useLayout } from '../../components/frame'
+import { CardFace, earnLabel, Emoji, ErrorNotice, GlassButton, LargeTitle, Loading, MerchantMark, Row, Section, StoreBadge } from '../../components/ui'
+import { money, relativeDay } from '../../lib/format'
+import { HereTiles } from './HereTiles'
+import { AddCardSheet, CardDetailsSheet, ConfirmRemoveSheet, StoreSheet, WhySheet } from './sheets'
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { MotionConfig, motion } from 'motion/react'
-import { api, newIdempotencyKey } from '../../api'
-import { useStoreDetection } from '../../location'
-import { useNav } from '../../navigation'
-import type { Card, Location, RecommendResponse } from '../../types'
-import { formatCents, parseDollarsToCents } from '../../lib/format'
-import { DemoBadge, ErrorNotice, Loading, ScreenHeader } from '../../components/ui'
-import { WalletCard } from './WalletCard'
-import { WhyDrawer } from './WhyDrawer'
-import { PayButton } from './PayButton'
-import { Receipt, type ReceiptData } from './Receipt'
-import { StorePicker } from './StorePicker'
-import { CardBenefitsSheet } from './CardBenefitsSheet'
-import { DetectionNotice } from './DetectionNotice'
-import { CardManager } from './CardManager'
-import { playChime, unlockAudio, vibrateSuccess, vibrateTick } from './feedback'
-import { HANDSHAKE_MS, READ_DURATION_MS, RECEIPT_DELAY_MS } from './timing'
+const CARD_RATIO = 214 / 340
+const STRIP = 58
+/** Laptop: the card stack's column width. */
+const WIDE_STACK_W = 400
+const cardSpring = { type: 'spring', duration: 0.55, bounce: 0.14 } as const
 
-export type PayPhase = 'idle' | 'located' | 'scan' | 'read' | 'success' | 'receipt'
+type SheetName = 'store' | 'why' | 'add' | 'details' | 'remove' | null
 
-
-// Deck geometry. Card size follows the available width, capped at 340 px.
-const MAX_CARD_W = 340
-const CARD_RATIO = 0.63
-const LOSER_GAP = 22 // between the lifted winner and the loser stack
-const LOSER_PEEK = 42 // visible strip of each loser: enough to read its name
-const SPRING = { type: 'spring', stiffness: 260, damping: 26 } as const
-
-function useWidth<T extends HTMLElement>() {
-  const ref = useRef<T>(null)
-  const [width, setWidth] = useState(MAX_CARD_W)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-  return [ref, width] as const
-}
-
-export function WalletScreen() {
-  const nav = useNav()
-  const detection = useStoreDetection()
-  // Latest detection id already acted on (or deliberately skipped by the user).
-  const handledDetection = useRef(0)
-  const [cards, setCards] = useState<Card[] | null>(null)
-  const [locations, setLocations] = useState<Location[]>([])
-  const [loadError, setLoadError] = useState<unknown>(null)
-  const [loadAttempt, setLoadAttempt] = useState(0)
-  const [managerOpen, setManagerOpen] = useState(false)
-
-  const [rec, setRec] = useState<RecommendResponse | null>(null)
-  const [recError, setRecError] = useState<unknown>(null)
-  const [arriving, setArriving] = useState<Location | null>(null)
-  // Metres from the store when the lifted store was auto-detected; null for a manual pick.
-  const [detectedDistanceM, setDetectedDistanceM] = useState<number | null>(null)
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [benefitsCard, setBenefitsCard] = useState<Card | null>(null)
-  const closeBenefits = useCallback(() => setBenefitsCard(null), [])
-  const [phase, setPhaseState] = useState<PayPhase>('idle')
-  const [receipt, setReceipt] = useState<ReceiptData | null>(null)
-  const [amountText, setAmountText] = useState('')
-
-  // Timer callbacks read the live phase from here, not from a stale closure.
-  const phaseRef = useRef<PayPhase>('idle')
-  const setPhase = (next: PayPhase) => {
-    phaseRef.current = next
-    setPhaseState(next)
-  }
-  const timers = useRef<number[]>([])
-  const clearTimers = () => {
-    timers.current.forEach((t) => window.clearTimeout(t))
-    timers.current = []
-  }
-  const later = (fn: () => void, ms: number) => {
-    timers.current.push(window.setTimeout(fn, ms))
-  }
-  const recAbort = useRef<AbortController | null>(null)
-  const purchase = useRef<{ key: string; rec: RecommendResponse } | null>(null)
-
-  const [deckRef, deckWidth] = useWidth<HTMLDivElement>()
-  const cardW = Math.min(MAX_CARD_W, Math.floor(deckWidth))
+/**
+ * The Wallet app half of Apple Wallet: your cards, and each card's purchases.
+ * Paying is its own screen (PaySheet), opened from the Pay button beside the tab bar or the side button.
+ * Phone: tap a card to open it. Laptop: the stack on the left, the chosen card's purchases beside it.
+ */
+export function WalletScreen({ session, width }: { session: Session; width: number }) {
+  const wide = useLayout() === 'wide'
+  const cardW = (wide ? WIDE_STACK_W : width) - 32
   const cardH = Math.round(cardW * CARD_RATIO)
-  const idleStep = Math.round(cardH * 0.26)
+  const [presented, setPresentedRaw] = useState<string | null>(null)
+  // Cards tapped in the stack morph into place (shared layoutId). A card just added rises in instead.
+  const [morph, setMorph] = useState(false)
+  const setPresented = (id: string | null, fromStack = false) => {
+    setMorph(fromStack)
+    setPresentedRaw(id)
+  }
+  const [sheet, setSheet] = useState<SheetName>(null)
 
-  useEffect(() => {
-    const ctrl = new AbortController()
-    setLoadError(null)
-    Promise.all([api.wallet(ctrl.signal), api.locations(ctrl.signal)]).then(
-      ([w, l]) => {
-        setCards(w.cards)
-        setLocations(l.locations)
-      },
-      (e) => !ctrl.signal.aborted && setLoadError(e),
-    )
-    return () => ctrl.abort()
-  }, [loadAttempt])
+  const presentedCard = session.cards.find((c) => c.id === presented) ?? null
+  const cardsById = useMemo(() => Object.fromEntries(session.cards.map((c) => [c.id, c])), [session.cards])
+  // Laptop: some card is always open beside the stack; the best one here unless you pick another.
+  const openCard = wide ? (presentedCard ?? session.cards.find((c) => c.id === session.winnerCardId) ?? session.cards[0] ?? null) : presentedCard
 
-  useEffect(
-    () => () => {
-      clearTimers()
-      recAbort.current?.abort()
-    },
-    [],
+  const sheets = (
+    <>
+      <StoreSheet
+        open={sheet === 'store'}
+        onOpenChange={(o) => setSheet(o ? 'store' : null)}
+        locations={session.locations}
+        detection={session.detection}
+        storeId={session.storeId}
+        onPick={(id) => {
+          session.setStoreId(id)
+          setSheet(null)
+        }}
+      />
+      <WhySheet open={sheet === 'why'} onOpenChange={(o) => setSheet(o ? 'why' : null)} rec={session.rec} cardsById={cardsById} />
+      <AddCardSheet
+        open={sheet === 'add'}
+        onOpenChange={(o) => setSheet(o ? 'add' : null)}
+        onAdd={async (type, last4) => {
+          const c = await session.addCard(type, last4)
+          setTimeout(() => setPresented(c.id), 350)
+        }}
+      />
+      <CardDetailsSheet open={sheet === 'details'} onOpenChange={(o) => setSheet(o ? 'details' : null)} card={openCard} />
+      <ConfirmRemoveSheet
+        open={sheet === 'remove'}
+        onOpenChange={(o) => setSheet(o ? 'remove' : null)}
+        card={openCard}
+        onRemove={async () => {
+          if (openCard) await session.removeCard(openCard.id)
+          setPresented(null)
+          setSheet(null)
+        }}
+      />
+    </>
   )
 
-  // ── Location ──────────────────────────────────────────────────────
-
-  /**
-   * `detectedM` is the measured distance when the store came from the location check.
-   * `amountCents` is a typed checkout total; omitted, the store's typical spend is used.
-   */
-  const arriveAt = (loc: Location, detectedM: number | null = null, amountCents?: number) => {
-    setPickerOpen(false)
-    clearTimers()
-    recAbort.current?.abort()
-    const ctrl = new AbortController()
-    recAbort.current = ctrl
-    setArriving(loc)
-    setRecError(null)
-    api.recommend(loc.id, amountCents, ctrl.signal).then(
-      (r) => {
-        setRec(r)
-        setAmountText((r.amount_cents / 100).toFixed(2))
-        setReceipt(null)
-        setPhase('located')
-        setArriving(null)
-        setDetectedDistanceM(detectedM)
-      },
-      (e) => {
-        if (ctrl.signal.aborted) return
-        setRecError(e)
-        setArriving(null)
-      },
-    )
-  }
-
-  // Mock purchase amount: re-rank the wallet for the typed checkout total.
-  const commitAmount = () => {
-    if (!rec) return
-    const cents = parseDollarsToCents(amountText)
-    if (cents === null || cents > 10_000_000) {
-      setAmountText((rec.amount_cents / 100).toFixed(2))
-      return
-    }
-    if (cents === rec.amount_cents) return
-    const loc = locations.find((l) => l.id === rec.merchant.id)
-    if (loc) arriveAt(loc, detectedDistanceM, cents)
-  }
-
-  const leaveStore = () => {
-    clearTimers()
-    recAbort.current?.abort()
-    // The user chose to be nowhere: do not re-arrive at this detection.
-    handledDetection.current = detection.id
-    setArriving(null)
-    setRec(null)
-    setDetectedDistanceM(null)
-    setReceipt(null)
-    setRecError(null)
-    setPhase('idle')
-  }
-
-  // Arrive at the detected store once per detection, and only from idle, so a
-  // manual pick, a payment in progress, or an open picker is never overridden.
-  useEffect(() => {
-    const { status, location, id } = detection
-    if (status !== 'detected' || !location || id === handledDetection.current) return
-    if (!cards?.length || phase !== 'idle' || pickerOpen) return
-    handledDetection.current = id
-    arriveAt(location, location.distance_m)
-  }, [detection, cards, phase, pickerOpen])
-
-  // ── Purchase logging ──────────────────────────────────────────────
-
-  const save = useCallback(
-    async (key: string, r: RecommendResponse) => {
-      setReceipt((prev) => prev && { ...prev, save: { status: 'saving' } })
-      try {
-        const { transaction } = await api.createTransaction({
-          idempotency_key: key,
-          merchant_id: r.merchant.id,
-          subtotal_cents: r.amount_cents,
-          card_used_id: r.winner_card_id!,
-          channel: 'store',
-          source: 'wallet',
-        })
-        // Server values are authoritative
-        setReceipt((prev) =>
-          prev && { ...prev, points: transaction.points_earned, valueCents: transaction.earned_cents, save: { status: 'saved' } },
-        )
-        nav.notifyTransactionLogged()
-      } catch (error) {
-        setReceipt((prev) => prev && { ...prev, save: { status: 'failed', error } })
-      }
-    },
-    [nav],
+  const addButton = (
+    <GlassButton label="Add card" onClick={() => setSheet('add')}>
+      <PlusIcon size={22} weight="bold" />
+    </GlassButton>
   )
 
-  // ── Hold-to-pay state machine ─────────────────────────────────────
-
-  const holdStart = () => {
-    const r = rec
-    if (phaseRef.current !== 'located' || !r?.winner_card_id) return
-    unlockAudio()
-    vibrateTick()
-    setPhase('scan')
-    later(() => {
-      if (phaseRef.current !== 'scan') return
-      setPhase('read')
-      later(() => {
-        if (phaseRef.current !== 'read') return
-        setPhase('success')
-        playChime()
-        vibrateSuccess()
-
-        const winner = r.ranking.find((e) => e.card_id === r.winner_card_id)!
-        setReceipt({
-          cardName: winner.card_name,
-          merchantName: r.merchant.name,
-          amountCents: r.amount_cents,
-          points: winner.points,
-          valueCents: winner.value_cents,
-          save: { status: 'saving' },
-        })
-        // One key per purchase; Retry reuses it so the server never double-logs.
-        purchase.current = { key: newIdempotencyKey(), rec: r }
-        void save(purchase.current.key, r)
-        later(() => phaseRef.current === 'success' && setPhase('receipt'), RECEIPT_DELAY_MS)
-      }, READ_DURATION_MS)
-    }, HANDSHAKE_MS)
-  }
-
-  const holdEnd = () => {
-    // Releasing before success cancels back to located
-    if (phaseRef.current === 'scan' || phaseRef.current === 'read') {
-      clearTimers()
-      setPhase('located')
-    }
-  }
-
-  const dismissReceipt = () => {
-    clearTimers()
-    setReceipt(null)
-    setPhase('located')
-  }
-
-  // ── Render ────────────────────────────────────────────────────────
-
-  if (!cards) {
+  if (wide) {
     return (
-      <section aria-label="Wallet">
-        <ScreenHeader title="Wallet" subtitle={<DemoBadge>Simulated payments · demo cards</DemoBadge>} />
-        {loadError ? <ErrorNotice error={loadError} onRetry={() => setLoadAttempt((n) => n + 1)} /> : <Loading label="Loading your wallet…" />}
-      </section>
+      <div className="pb-16">
+        <LargeTitle right={addButton}>Wallet</LargeTitle>
+        {!session.cardsLoaded ? (
+          <div className="px-4">{session.loadError ? <ErrorNotice error={session.loadError} onRetry={session.retryLoad} /> : <Loading label="Loading your wallet…" />}</div>
+        ) : (
+          <div className="grid items-start gap-6 pt-2" style={{ gridTemplateColumns: `${WIDE_STACK_W}px minmax(0, 1fr)` }}>
+            <div>
+              <StoreChip session={session} onOpen={() => setSheet('store')} />
+              {session.recError ? (
+                <div className="px-4 pb-4">
+                  <ErrorNotice error={session.recError} onRetry={session.retryRec} />
+                </div>
+              ) : null}
+              <Stack cards={session.cards} cardH={cardH} session={session} selectedId={openCard?.id ?? null} onPresent={(id) => setPresented(id)} />
+            </div>
+            {openCard ? (
+              <div key={openCard.id}>
+                <div className="flex items-center justify-between gap-3 px-4 pb-1">
+                  <div className="min-w-0">
+                    <h2 className="truncate font-[family-name:var(--font-sf-rounded)] text-[28px] font-bold leading-[34px]">{openCard.name}</h2>
+                    <p className="text-[15px] text-[rgba(235,235,245,0.6)]">
+                      {openCard.issuer} · •••• {openCard.last4}
+                    </p>
+                  </div>
+                  <CardMenu onDetails={() => setSheet('details')} onRemove={() => setSheet('remove')} />
+                </div>
+                <DetailBody card={openCard} session={session} onWhy={() => setSheet('why')} onPick={() => setSheet('store')} />
+              </div>
+            ) : null}
+          </div>
+        )}
+        {sheets}
+      </div>
     )
-  }
-
-  const located = phase !== 'idle' && rec !== null
-  const winnerId = located ? rec.winner_card_id : null
-  const evalById = new Map(rec?.ranking.map((e) => [e.card_id, e]) ?? [])
-  const losers = located ? rec.ranking.filter((e) => e.card_id !== winnerId) : []
-  const lifted = phase === 'read' || phase === 'success' || phase === 'receipt'
-  const busy = phase === 'scan' || phase === 'read' || phase === 'success'
-  const showWhy = located && rec.why !== null
-
-  const deckHeight = cards.length === 0 ? 0 : !located
-    ? (cards.length - 1) * idleStep + cardH
-    : winnerId
-      ? cardH + LOSER_GAP + losers.length * LOSER_PEEK
-      : losers.length * LOSER_PEEK + cardH - LOSER_PEEK
-
-  const slot = (card: Card, idleIndex: number) => {
-    if (!located) return { y: idleIndex * idleStep, scale: 1, dim: 1, z: idleIndex + 1 }
-    if (card.id === winnerId) return { y: lifted ? -12 : 0, scale: 1.05, dim: 1, z: 100 }
-    const i = losers.findIndex((e) => e.card_id === card.id)
-    const top = winnerId ? cardH + LOSER_GAP : 0
-    // Dim with brightness rather than opacity so stacked cards stay opaque
-    return { y: top + i * LOSER_PEEK, scale: winnerId ? 0.94 : 1, dim: 0.4, z: i + 1 }
   }
 
   return (
-    <MotionConfig reducedMotion="user">
-      <section aria-label="Wallet" className="flex min-h-full flex-col">
-        <ScreenHeader title="Wallet" subtitle={<DemoBadge>Simulated payments · demo cards</DemoBadge>} />
-
-        <button type="button" disabled={busy || phase === 'receipt'} onClick={() => {
-          leaveStore()
-          setManagerOpen((open) => !open)
-        }} className="mb-4 self-start rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold disabled:opacity-50">Manage cards</button>
-
-        {managerOpen && <CardManager cards={cards} onClose={() => setManagerOpen(false)} onChange={async () => {
-          leaveStore()
-          // The wallet changed, so the detected store's best card may too: let it re-apply.
-          handledDetection.current = 0
-          const wallet = await api.wallet()
-          setCards(wallet.cards)
-        }} />}
-
-        {cards.length === 0 && <p className="mb-4 rounded-2xl bg-white/5 p-4 text-sm text-white/70">Your wallet is empty. Use Manage cards to add your first card.</p>}
-
-        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <button
-            type="button"
-            onClick={() => setPickerOpen(true)}
-            disabled={busy || locations.length === 0}
-            className={`inline-flex max-w-full items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-sky-400 ${
-              located ? 'border-cyan-400/35 bg-cyan-400/10 text-white' : 'border-white/10 bg-white/[0.08] text-white/85'
-            }`}
-          >
-            <span aria-hidden="true" className="relative flex h-2 w-2 shrink-0">
-              {located && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />}
-              <span className={`relative inline-flex h-2 w-2 rounded-full ${located ? 'bg-cyan-400' : 'bg-white/50'}`} />
-            </span>
-            <span className="truncate">
-              {arriving
-                ? `Locating ${arriving.merchant.name}…`
-                : located
-                  ? `${rec.merchant.name} (${rec.merchant.category_label})`
-                  : 'Simulate arriving at a store'}
-            </span>
-            <span aria-hidden="true" className="text-[10px] opacity-60">▾</span>
-          </button>
-          {located && (
-            <label className="inline-flex items-center gap-1.5 text-[13px] text-white/50">
-              Checkout
-              <span className="inline-flex items-center rounded-lg bg-white/[0.08] px-2 py-1 focus-within:ring-1 focus-within:ring-sky-400">
-                <span aria-hidden="true" className="font-semibold text-white">$</span>
-                <input
-                  aria-label={`Purchase amount in dollars (currently ${formatCents(rec.amount_cents)})`}
-                  inputMode="decimal"
-                  value={amountText}
-                  disabled={busy || phase === 'receipt' || arriving !== null}
-                  onChange={(e) => setAmountText(e.target.value)}
-                  onBlur={commitAmount}
-                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                  className="w-[4.5rem] bg-transparent font-semibold text-white outline-none disabled:opacity-60"
-                />
-              </span>
-            </label>
-          )}
-        </div>
-
-        <DetectionNotice detection={detection} detectedDistanceM={detectedDistanceM} located={located || arriving !== null} />
-
-        {recError ? (
-          <div className="mb-4">
-            <ErrorNotice error={recError} onRetry={arriving ? undefined : () => setPickerOpen(true)} />
-          </div>
-        ) : null}
-
-        {located && !winnerId && (
-          <p role="alert" className="mb-4 rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">
-            No card in your wallet is accepted at {rec.merchant.name}.
-          </p>
-        )}
-
-        {cards.length > 0 && !busy && phase !== 'receipt' && (
-          <p className="mb-2 text-center text-xs text-white/35">Tap a card to see its benefits</p>
-        )}
-
-        {/* Phone: deck, why drawer, sticky pay bar. Desktop: deck + pay on the left, why drawer on the right. */}
-        <div className="flex flex-1 flex-col lg:grid lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-10">
-        <div ref={deckRef} className={`flex w-full justify-center lg:row-start-1 ${showWhy ? 'lg:col-start-1' : 'lg:col-span-2'}`}>
-          <motion.div
-            className="relative shrink-0 [clip-path:inset(-60px_-60px_0_-60px)]"
-            style={{ width: cardW }}
-            animate={{ height: deckHeight }}
-            transition={SPRING}
-          >
-            {cards.map((card, idx) => {
-              const s = slot(card, idx)
-              const isWinner = card.id === winnerId
-              return (
-                <motion.div
-                  key={card.id}
-                  className="absolute left-0 top-0"
-                  style={{ zIndex: s.z }}
-                  initial={false}
-                  animate={{ y: s.y, scale: s.scale, filter: `brightness(${s.dim})` }}
-                  transition={isWinner && lifted ? { type: 'spring', stiffness: 500, damping: 14 } : { ...SPRING, delay: located ? 0 : idx * 0.03 }}
+    <LayoutGroup>
+      <div className="pb-32">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {presentedCard ? (
+            <motion.div key="detail-head" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.12 } }}>
+              <div className="flex items-center justify-between px-4 pb-3 pt-1">
+                {/* A back button, not "Done": you browse a card's history, there's nothing to finish. */}
+                <motion.button
+                  type="button"
+                  aria-label="Back to Wallet"
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setPresented(null)}
+                  className="n-glass flex h-11 items-center gap-1 rounded-full pl-3 pr-4 text-[17px] font-semibold focus-visible:outline-2 focus-visible:outline-white/70"
                 >
-                  <WalletCard card={card} width={cardW} height={cardH} evaluation={located ? evalById.get(card.id) : undefined} isWinner={isWinner} />
-                  {/* Whole-card tap target; on a stacked card only its visible strip is reachable. */}
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setBenefitsCard(card)}
-                    aria-label={`${card.name} benefits`}
-                    className="absolute inset-0 cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400 disabled:cursor-default"
-                  />
-                  {isWinner && phase === 'scan' && (
-                    // Proximity radar: concentric cyan rings from the card's top edge
-                    <span aria-hidden="true" className="pointer-events-none absolute left-1/2 top-0 z-10">
-                      {[0, 0.4, 0.8].map((delay) => (
-                        <motion.span
-                          key={delay}
-                          className="absolute h-6 w-6 rounded-full border-2 border-cyan-400/75"
-                          style={{ x: '-50%', y: '-50%' }}
-                          initial={{ scale: 0.2, opacity: 1 }}
-                          animate={{ scale: 12, opacity: 0 }}
-                          transition={{ duration: 1.2, ease: 'easeOut', repeat: Infinity, delay }}
-                        />
-                      ))}
-                    </span>
-                  )}
-                </motion.div>
-              )
-            })}
-          </motion.div>
-        </div>
+                  <CaretLeftIcon size={18} weight="bold" />
+                  Wallet
+                </motion.button>
+                <CardMenu onDetails={() => setSheet('details')} onRemove={() => setSheet('remove')} />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div key="home-head" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.12 } }}>
+              <LargeTitle right={addButton}>Wallet</LargeTitle>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {showWhy && (
-          <div className="mt-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">
-            <WhyDrawer rec={rec} />
+        {!session.cardsLoaded ? (
+          <div className="px-4">{session.loadError ? <ErrorNotice error={session.loadError} onRetry={session.retryLoad} /> : <Loading label="Loading your wallet…" />}</div>
+        ) : presentedCard ? (
+          <Detail
+            key={presentedCard.id}
+            morph={morph}
+            card={presentedCard}
+            cardH={cardH}
+            session={session}
+            onWhy={() => setSheet('why')}
+            onPick={() => setSheet('store')}
+          />
+        ) : (
+          <>
+            <StoreChip session={session} onOpen={() => setSheet('store')} />
+            {session.recError ? (
+              <div className="px-4 pb-4">
+                <ErrorNotice error={session.recError} onRetry={session.retryRec} />
+              </div>
+            ) : null}
+            <Stack cards={session.cards} cardH={cardH} session={session} onPresent={(id) => setPresented(id, true)} />
+          </>
+        )}
+      </div>
+
+      {sheets}
+    </LayoutGroup>
+  )
+}
+
+function StoreChip({ session, onOpen }: { session: Session; onOpen: () => void }) {
+  const { store, rec } = session
+  return (
+    <div className="flex items-center gap-2 px-4 pb-4">
+      <motion.button
+        type="button"
+        layout="position"
+        whileTap={{ scale: 0.97 }}
+        onClick={onOpen}
+        className="n-glass flex h-11 min-w-0 items-center gap-2 rounded-full pl-3 pr-4 text-[15px] focus-visible:outline-2 focus-visible:outline-white/70"
+      >
+        <NavigationArrowIcon size={16} weight="fill" className={store ? 'scale-x-[-1] text-[#0A84FF]' : 'scale-x-[-1] text-white/40'} />
+        {store && rec ? (
+          <span className="flex min-w-0 items-baseline">
+            <TextMorph className="font-semibold">{store.merchant.name}</TextMorph>
+            <span className="whitespace-pre text-[rgba(235,235,245,0.6)]"> · </span>
+            <TextMorph className="text-[rgba(235,235,245,0.6)] tabular-nums">{money(rec.amount_cents)}</TextMorph>
+          </span>
+        ) : (
+          <span className="text-[rgba(235,235,245,0.6)]">Where are you shopping?</span>
+        )}
+      </motion.button>
+      {store ? (
+        <motion.button
+          type="button"
+          aria-label="Leave store"
+          whileTap={{ scale: 0.92 }}
+          onClick={() => session.setStoreId(null)}
+          className="n-glass grid size-11 place-items-center rounded-full text-white/70 focus-visible:outline-2 focus-visible:outline-white/70"
+        >
+          <XIcon size={16} weight="bold" />
+        </motion.button>
+      ) : null}
+    </div>
+  )
+}
+
+function Stack({
+  cards,
+  cardH,
+  session,
+  selectedId = null,
+  onPresent,
+}: {
+  cards: Card[]
+  cardH: number
+  session: Session
+  /** Laptop: the card open beside the stack. */
+  selectedId?: string | null
+  onPresent: (id: string) => void
+}) {
+  const height = (cards.length - 1) * STRIP + cardH
+  if (!cards.length) {
+    return (
+      <div className="n-panel mx-4 grid place-items-center rounded-[20px] px-6 py-12 text-center">
+        <Emoji name="credit-card" size={64} className="mb-3" />
+        <p className="text-[17px] font-semibold">No cards yet</p>
+        <p className="pt-1 text-[15px] text-[rgba(235,235,245,0.6)]">Add the cards you carry and we'll pick the best one at every store.</p>
+      </div>
+    )
+  }
+  return (
+    <div className="relative mx-4" style={{ height }}>
+      {cards.map((c, i) => {
+        const ev = session.evaluation(c.id)
+        const isBest = session.winnerCardId === c.id
+        return (
+          <motion.button
+            key={c.id}
+            layoutId={`n-card-${c.id}`}
+            type="button"
+            aria-label={`${c.name} ending ${c.last4}${ev ? (ev.accepted ? (ev.value_cents ? `, earns ${money(ev.value_cents)} here` : ', earns nothing here') : ', not accepted here') : ''}`}
+            aria-pressed={selectedId !== null ? selectedId === c.id : undefined}
+            onClick={() => onPresent(c.id)}
+            whileTap={{ scale: 0.985 }}
+            transition={cardSpring}
+            className="absolute inset-x-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+            style={{ top: i * STRIP, height: cardH, zIndex: i, borderRadius: 16, boxShadow: '0 -6px 18px rgba(0,0,0,0.45)' }}
+          >
+            <CardFace card={c} badge={ev ? <StoreBadge ev={ev} best={isBest} /> : undefined} />
+            {selectedId === c.id ? <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[16px] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.85)]" /> : null}
+          </motion.button>
+        )
+      })}
+    </div>
+  )
+}
+
+function Detail({
+  morph,
+  card,
+  cardH,
+  session,
+  onWhy,
+  onPick,
+}: {
+  morph: boolean
+  card: Card
+  cardH: number
+  session: Session
+  onWhy: () => void
+  onPick: () => void
+}) {
+  return (
+    <div>
+      <div className="relative mx-4" style={{ height: cardH }}>
+        <motion.div
+          layoutId={morph ? `n-card-${card.id}` : undefined}
+          initial={morph ? false : { y: 420, scale: 0.96 }}
+          animate={{ y: 0, scale: 1 }}
+          transition={cardSpring}
+          className="absolute inset-0"
+          style={{ borderRadius: 16, boxShadow: '0 12px 30px rgba(0,0,0,0.5)' }}
+        >
+          {/* Tilt sits inside the layoutId element: both write transform, so never on the same node. */}
+          <Tilt
+            className="h-full w-full"
+            tiltMaxAngleX={8}
+            tiltMaxAngleY={10}
+            perspective={900}
+            transitionSpeed={1200}
+            glareEnable
+            glareMaxOpacity={0.3}
+            glareColor="#ffffff"
+            glarePosition="all"
+            glareBorderRadius="16px"
+          >
+            <CardFace card={card} live />
+          </Tilt>
+        </motion.div>
+      </div>
+
+      <DetailBody card={card} session={session} onWhy={onWhy} onPick={onPick} delay={0.12} />
+    </div>
+  )
+}
+
+/** Under an opened card: what it earns here, and its purchases. */
+function DetailBody({ card, session, onWhy, onPick, delay = 0 }: { card: Card; session: Session; onWhy: () => void; onPick: () => void; delay?: number }) {
+  const txs = useMemo(() => session.historyFor(card.id).slice(0, 12), [session, card.id])
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', duration: 0.4, bounce: 0, delay }}>
+      <HereTiles session={session} card={card} onWhy={onWhy} onPick={onPick} />
+
+      <Section title="Latest Transactions">
+        {txs.length ? (
+          txs.map((t, i) => (
+            <motion.div key={t.id} layout="position" initial={t.id.startsWith('preview-') ? { opacity: 0, y: -10 } : false} animate={{ opacity: 1, y: 0 }}>
+              <Row
+                leading={<MerchantMark id={t.merchant_id} name={t.merchant_name} />}
+                title={t.merchant_name}
+                subtitle={`${relativeDay(t.ts)} · ${t.channel === 'store' ? 'In store' : 'Online'}`}
+                trailing={
+                  <div className="tabular-nums">
+                    <div className="text-[17px]">{money(t.amount_cents)}</div>
+                    {/* What the purchase earned. What it missed lives on the Rewards tab, not in a card's history. */}
+                    <div className={`text-[13px] ${t.earned_cents ? 'text-[#30D158]' : 'text-[rgba(235,235,245,0.6)]'}`}>{earnLabel(t.earned_cents)}</div>
+                  </div>
+                }
+                last={i === txs.length - 1}
+              />
+            </motion.div>
+          ))
+        ) : (
+          <div className="px-4 py-8 text-center">
+            <p className="text-[17px] font-semibold">No purchases yet</p>
+            <p className="pt-1 text-[15px] text-[rgba(235,235,245,0.6)]">Payments with {card.name} show up here.</p>
           </div>
         )}
+      </Section>
+    </motion.div>
+  )
+}
 
-        {/* Pay bar stays reachable at the bottom of the scroll area */}
-        <div className={`sticky bottom-0 z-30 -mx-4 mt-auto flex flex-col items-center bg-gradient-to-b from-transparent to-black to-[28px] px-4 pb-2 pt-5 lg:static lg:row-start-2 lg:mx-0 lg:bg-none lg:pt-8 ${showWhy ? 'lg:col-start-1' : 'lg:col-span-2'}`}>
-          <PayButton phase={phase} disabled={!located || !winnerId || phase === 'receipt'} onHoldStart={holdStart} onHoldEnd={holdEnd} />
-          {located && !busy && (
-            <button type="button" onClick={leaveStore} className="mt-1 text-[13px] text-white/40 hover:text-white/60">
-              Leave store
-            </button>
-          )}
-        </div>
-        </div>
-
-        <CardBenefitsSheet card={benefitsCard} onClose={closeBenefits} />
-        <StorePicker open={pickerOpen} locations={locations} currentId={located ? rec.merchant.id : null} onPick={arriveAt} onClose={() => setPickerOpen(false)} />
-        <Receipt
-          data={phase === 'receipt' ? receipt : null}
-          onDone={dismissReceipt}
-          onRetry={() => purchase.current && void save(purchase.current.key, purchase.current.rec)}
-        />
-      </section>
-    </MotionConfig>
+function CardMenu({ onDetails, onRemove }: { onDetails: () => void; onRemove: () => void }) {
+  const frame = useFrame()
+  const item =
+    'flex h-11 cursor-default items-center justify-between gap-6 px-4 text-[17px] outline-none data-highlighted:bg-white/10 select-none'
+  return (
+    <Menu.Root>
+      <Menu.Trigger
+        aria-label="More"
+        className="n-glass grid size-11 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-white/70"
+      >
+        <DotsThreeIcon size={24} weight="bold" />
+      </Menu.Trigger>
+      <Menu.Portal container={frame}>
+        <Menu.Positioner sideOffset={8} align="end" className="z-50 outline-none">
+          <Menu.Popup className="n-sheet min-w-[220px] origin-[var(--transform-origin)] overflow-hidden rounded-[20px] py-1 text-white outline-none transition-[scale,opacity] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:scale-[0.96] data-ending-style:opacity-0 data-starting-style:scale-[0.96] data-starting-style:opacity-0">
+            <Menu.Item className={item} onClick={onDetails}>
+              Card details
+            </Menu.Item>
+            <Menu.Separator className="h-[0.5px] bg-white/15" />
+            <Menu.Item className={`${item} text-[#FF453A]`} onClick={onRemove}>
+              Remove card
+            </Menu.Item>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   )
 }
