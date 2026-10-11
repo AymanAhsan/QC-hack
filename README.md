@@ -52,6 +52,14 @@ On a computer, the quickest check is Chrome DevTools → ⋮ → More tools → 
 
 If the phone cannot connect, allow Node.js through the Windows firewall on private networks (Windows prompts the first time `npm run dev` runs), or check that the Wi-Fi isn't a guest/isolated network. The backend can stay on `127.0.0.1`; the phone only talks to Vite.
 
+### Phone, laptop, and preview
+
+The same app has three layouts:
+
+- **Phone** (narrower than 1024 px): a floating tab bar with Wallet, Scan, Deals, and Rewards, and a round Pay button beside it.
+- **Laptop** (1024 px and wider): a sidebar with the same tabs and Pay at the bottom. Wallet shows the card stack beside the open card's purchases.
+- **Preview**: add `?preview` to the URL to show the phone layout inside an iPhone frame on a laptop, e.g. `http://localhost:5173/?preview&geo=40.73342,-73.98788`. Double-click the frame's side button to open Pay, like Apple Pay.
+
 ## Deploy on Vercel
 
 Import this repository as **one project**, with the project Root Directory set
@@ -93,7 +101,7 @@ vercel dev -L
 This starts all services locally without cloud authentication. The existing
 two-terminal workflow above still works independently of Vercel. After
 deploying, check `/api/health`, load the Wallet, and log a simulated purchase
-then check Missed to verify database writes and reads.
+then check Rewards to verify database writes and reads.
 
 Vercel CLI 52.0.0 rejects object-form service destinations (`destination
 should be string`). If you see that error, update to a CLI release supporting
@@ -107,9 +115,12 @@ References: [Vercel Services](https://vercel.com/docs/services),
 
 ```bash
 cd backend && python -m pytest          # engine, API, persistence, cart tests
-cd frontend && npm test                 # Missed, Wallet, and store-detection tests (vitest)
+cd frontend && npm test                 # store-detection tests (vitest)
 cd frontend && npm run build            # typecheck + production build
+cd e2e && npm install && npm test       # the whole app in Chrome: phone, laptop, preview
 ```
+
+The end-to-end run starts its own backend on a fresh SQLite file and its own Vite server, walks every screen, and writes screenshots plus `report.json` to `e2e/artifacts/app/`.
 
 ## Environment variables
 
@@ -135,7 +146,7 @@ Secrets live only in `backend/.env`, which is git-ignored.
 
 | Area | Owner | Files |
 |---|---|---|
-| Foundation, engine, integration | Omar | `backend/{main,config,data,engine,schemas,serializers,services,errors}.py`, `backend/routers/{wallet,recommend,stack,deals}.py`, `frontend/src/{App,api,types,navigation}.tsx?`, `frontend/src/components/{TabBar,DevStatus,ui}.tsx`, docs |
+| Foundation, engine, integration | Omar | `backend/{main,config,data,engine,schemas,serializers,services,errors}.py`, `backend/routers/{wallet,recommend,stack,deals}.py`, `frontend/src/{App,api,types,navigation}.tsx?`, `frontend/src/components/{TabBar,ui}.tsx`, docs |
 | Wallet | Yousef | `frontend/src/screens/wallet/` |
 | Persistence, Missed | Ayman | `backend/db.py`, `backend/routers/{transactions,missed}.py`, `frontend/src/screens/missed/` |
 | Gemini, Scan, Deals | Nazeef | `backend/gemini.py`, `backend/routers/cart.py`, `frontend/src/screens/{scan,deals}/` |

@@ -12,7 +12,7 @@ Owner: Ayman. Adapted to the shared contract during integration (Omar). The HTTP
 | `backend/transaction_service.py` | `record_purchase()`: resolve merchant → `engine.evaluate_purchase` → save once per idempotency key |
 | `backend/seed.py` | 30 engine-computed demo purchases over the trailing 30 days, seeded once per database |
 | `backend/routers/transactions.py`, `missed.py` | `POST /api/transactions`, `GET /api/missed` |
-| `frontend/src/screens/missed/` | Missed screen: count-up total, daily chart, categories, history |
+| `frontend/src/screens/missed/` | Rewards screen (the `missed` tab): earned, saved with codes, left on the table, streak, daily chart, history |
 
 ## Storage and configuration
 
