@@ -88,7 +88,8 @@ function Root() {
           style={{ ['--sat' as string]: layout === 'wide' ? '0px' : 'max(12px, env(safe-area-inset-top, 0px))', ['--sab' as string]: 'env(safe-area-inset-bottom, 0px)' }}
         />
       )}
-      <ViewToggle view={current} onToggle={toggle} />
+      {/* A full-screen phone layout has its own buttons in that corner, and no room for desktop. */}
+      {framed || layout === 'wide' ? <ViewToggle view={current} onToggle={toggle} /> : null}
     </>
   )
 }
