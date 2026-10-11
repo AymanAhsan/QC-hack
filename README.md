@@ -1,4 +1,4 @@
-# CardMax: Credit Card Optimizer (hackathon demo)
+# CreditMaxx: Credit Card Optimizer (hackathon demo)
 
 Pick the best card in your wallet for every purchase, stack the best coupon on top, and see the rewards you missed. See [PROJECT.md](PROJECT.md) for the product, [PLANNING.md](PLANNING.md) for the plan, and [docs/API.md](docs/API.md) for the API contract.
 
