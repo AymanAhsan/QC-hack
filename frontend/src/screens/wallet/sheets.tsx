@@ -154,6 +154,25 @@ export function WhySheet({ open, onOpenChange, rec, cardsById }: { open: boolean
   )
 }
 
+const digitsOf = (s: string) => s.replace(/\D/g, '')
+/** "4242424242424242" → "4242 4242 4242 4242". */
+const groupNumber = (digits: string) => digits.replace(/(\d{4})(?=\d)/g, '$1 ')
+/** "0829" → "08/29"; the slash appears once the month is complete. */
+const groupExpiry = (digits: string) => (digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits)
+
+/** True when MMYY is a real month that hasn't already passed (a card is good through the end of its month). */
+function expiryOk(digits: string, now = new Date()) {
+  if (digits.length !== 4) return false
+  const month = Number(digits.slice(0, 2))
+  const year = 2000 + Number(digits.slice(2))
+  if (month < 1 || month > 12) return false
+  return year > now.getFullYear() || (year === now.getFullYear() && month >= now.getMonth() + 1)
+}
+
+const fieldClass =
+  'h-12 w-full n-well rounded-[16px] px-4 text-[17px] text-white placeholder:text-white/25 focus:outline-2 focus:outline-white/70'
+const fieldLabel = `block ${heading.replace('pt-6', 'pt-5')}`
+
 export function AddCardSheet({
   open,
   onOpenChange,
@@ -161,28 +180,39 @@ export function AddCardSheet({
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
-  /** Resolves once the card is in the wallet; a rejection is shown in the sheet. */
+  /**
+   * Resolves once the card is in the wallet; a rejection is shown in the sheet. The form collects the full
+   * number, holder, expiry and security code to look like a real card entry, but only the type and last four
+   * leave it: the wallet API never accepts or stores the rest.
+   */
   onAdd: (type: CardType, last4: string) => Promise<unknown>
 }) {
   const [type, setType] = useState<CardType | null>(null)
-  const [last4, setLast4] = useState('')
+  const [number, setNumber] = useState('')
+  const [holder, setHolder] = useState('')
+  const [expiry, setExpiry] = useState('')
+  const [cvv, setCvv] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>(null)
-  const valid = type && /^\d{4}$/.test(last4)
+  const expiryValid = expiryOk(expiry)
+  const valid = type && /^\d{15,16}$/.test(number) && holder.trim().length >= 2 && expiryValid && /^\d{3}$/.test(cvv)
   const close = (o: boolean) => {
     onOpenChange(o)
     if (!o) {
       setType(null)
-      setLast4('')
+      setNumber('')
+      setHolder('')
+      setExpiry('')
+      setCvv('')
       setError(null)
     }
   }
   const add = async () => {
-    if (!type || busy) return
+    if (!type || !valid || busy) return
     setBusy(true)
     setError(null)
     try {
-      await onAdd(type, last4)
+      await onAdd(type, number.slice(-4))
       close(false)
     } catch (e) {
       setError(e)
@@ -210,19 +240,63 @@ export function AddCardSheet({
           />
         ))}
       </div>
-      <label htmlFor="add-card-last4" className={`block ${heading.replace('pt-6', 'pt-5')}`}>
-        Last four digits
+      <label htmlFor="add-card-number" className={fieldLabel}>
+        Card number
       </label>
       <SmoothInput
-        id="add-card-last4"
+        id="add-card-number"
         inputMode="numeric"
-        autoComplete="off"
-        maxLength={4}
-        value={last4}
-        onChange={(v) => setLast4(v.replace(/\D/g, ''))}
-        placeholder="0042"
-        className="h-12 w-full n-well rounded-[16px] px-4 text-[17px] tracking-[3px] text-white placeholder:text-white/25 focus:outline-2 focus:outline-white/70"
+        autoComplete="cc-number"
+        value={groupNumber(number)}
+        onChange={(v) => setNumber(digitsOf(v).slice(0, 16))}
+        placeholder="1234 5678 9012 3456"
+        className={`${fieldClass} tracking-[1px]`}
       />
+      <label htmlFor="add-card-holder" className={fieldLabel}>
+        Cardholder name
+      </label>
+      <SmoothInput
+        id="add-card-holder"
+        autoComplete="cc-name"
+        autoCapitalize="words"
+        maxLength={60}
+        value={holder}
+        onChange={setHolder}
+        placeholder="Name on card"
+        className={fieldClass}
+      />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="add-card-expiry" className={fieldLabel}>
+            Expiration date
+          </label>
+          <SmoothInput
+            id="add-card-expiry"
+            inputMode="numeric"
+            autoComplete="cc-exp"
+            value={groupExpiry(expiry)}
+            onChange={(v) => setExpiry(digitsOf(v).slice(0, 4))}
+            placeholder="MM/YY"
+            className={fieldClass}
+          />
+        </div>
+        <div>
+          <label htmlFor="add-card-cvv" className={fieldLabel}>
+            Security code
+          </label>
+          <SmoothInput
+            id="add-card-cvv"
+            inputMode="numeric"
+            autoComplete="cc-csc"
+            maxLength={3}
+            value={cvv}
+            onChange={(v) => setCvv(digitsOf(v).slice(0, 3))}
+            placeholder="CVV"
+            className={fieldClass}
+          />
+        </div>
+      </div>
+      {expiry.length === 4 && !expiryValid ? <p className="px-1 pt-2 text-[13px] text-[#FF453A]">Check the expiration date.</p> : null}
       {error ? (
         <div className="pt-4">
           <ErrorNotice error={error} />
