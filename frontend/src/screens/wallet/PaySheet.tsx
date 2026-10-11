@@ -29,7 +29,18 @@ const slide = { type: 'spring', duration: 0.35, bounce: 0 } as const
  * the best card for the store up top, hold to pay, the other cards in a pile
  * underneath to switch. Opened from the Pay button or the side button.
  */
-export function PaySheet({ open, onOpenChange, session }: { open: boolean; onOpenChange: (open: boolean) => void; session: Session }) {
+export function PaySheet({
+  open,
+  onOpenChange,
+  session,
+  cardId = null,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  session: Session
+  /** A card to present instead of the best one, e.g. the card just tapped in Wallet. */
+  cardId?: string | null
+}) {
   const frame = useFrame()
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(closeTimer.current), [])
@@ -58,7 +69,7 @@ export function PaySheet({ open, onOpenChange, session }: { open: boolean; onOpe
           <div className="contents wide:pointer-events-none wide:fixed wide:inset-0 wide:z-40 wide:grid wide:place-items-center">
             <Dialog.Popup className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-[oklch(0.14_0.006_265)] pt-[var(--sat)] text-white outline-none transition-[translate,opacity] duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)] data-starting-style:translate-y-full data-ending-style:translate-y-full data-ending-style:duration-300 motion-reduce:data-starting-style:translate-y-0 motion-reduce:data-starting-style:opacity-0 motion-reduce:data-ending-style:translate-y-0 motion-reduce:data-ending-style:opacity-0 wide:pointer-events-auto wide:relative wide:inset-auto wide:h-[min(820px,calc(100dvh-48px))] wide:w-[400px] wide:rounded-[36px] wide:pt-4 wide:shadow-[0_30px_80px_-20px_rgb(0_0_0/0.8),inset_0_0_0_0.5px_rgb(255_255_255/0.1)]">
               <Dialog.Title className="sr-only">Pay</Dialog.Title>
-              <PayView session={session} onPay={pay} />
+              <PayView session={session} onPay={pay} cardId={cardId} />
             </Dialog.Popup>
           </div>
         </Dialog.Portal>
@@ -66,9 +77,9 @@ export function PaySheet({ open, onOpenChange, session }: { open: boolean; onOpe
   )
 }
 
-function PayView({ session, onPay }: { session: Session; onPay: (card: Card) => Transaction | null }) {
+function PayView({ session, onPay, cardId }: { session: Session; onPay: (card: Card) => Transaction | null; cardId: string | null }) {
   const [picking, setPicking] = useState(!session.store)
-  const [selected, setSelected] = useState<string | null>(session.winnerCardId)
+  const [selected, setSelected] = useState<string | null>(cardId ?? session.winnerCardId)
   const [paid, setPaid] = useState<Transaction | null>(null)
   const [width, setWidth] = useState(390)
   const root = useRef<HTMLDivElement>(null)
@@ -82,7 +93,13 @@ function PayView({ session, onPay }: { session: Session; onPay: (card: Card) => 
   }, [])
 
   // A new store (or a new total) presents its best card, like Apple Pay presenting the default card.
-  useEffect(() => setSelected(session.winnerCardId), [session.storeId, session.winnerCardId])
+  // Not on open: a card asked for by tapping it in Wallet stays until the store or total changes.
+  const seen = useRef({ storeId: session.storeId, winnerCardId: session.winnerCardId })
+  useEffect(() => {
+    if (seen.current.storeId === session.storeId && seen.current.winnerCardId === session.winnerCardId) return
+    seen.current = { storeId: session.storeId, winnerCardId: session.winnerCardId }
+    setSelected(session.winnerCardId)
+  }, [session.storeId, session.winnerCardId])
 
   const card = session.cards.find((c) => c.id === selected) ?? session.cards[0] ?? null
   const others = session.cards.filter((c) => c.id !== card?.id)

@@ -25,7 +25,7 @@ type SheetName = 'store' | 'why' | 'add' | 'details' | 'remove' | null
  * Paying is its own screen (PaySheet), opened from the Pay button beside the tab bar or the side button.
  * Phone: tap a card to open it. Laptop: the stack on the left, the chosen card's purchases beside it.
  */
-export function WalletScreen({ session, width }: { session: Session; width: number }) {
+export function WalletScreen({ session, width, onPayWith }: { session: Session; width: number; onPayWith: (cardId: string) => void }) {
   const wide = useLayout() === 'wide'
   const cardW = (wide ? WIDE_STACK_W : width) - 32
   const cardH = Math.round(cardW * CARD_RATIO)
@@ -162,6 +162,7 @@ export function WalletScreen({ session, width }: { session: Session; width: numb
             session={session}
             onWhy={() => setSheet('why')}
             onPick={() => setSheet('store')}
+            onPay={() => onPayWith(presentedCard.id)}
           />
         ) : (
           <>
@@ -307,6 +308,7 @@ function Detail({
   session,
   onWhy,
   onPick,
+  onPay,
 }: {
   morph: boolean
   card: Card
@@ -314,16 +316,22 @@ function Detail({
   session: Session
   onWhy: () => void
   onPick: () => void
+  onPay: () => void
 }) {
   return (
     <div>
       <div className="relative mx-4" style={{ height: cardH }}>
-        <motion.div
+        {/* Tapping the opened card presents it for payment, the way a card in Apple Wallet does. */}
+        <motion.button
+          type="button"
+          aria-label={`Pay with ${card.name} ending ${card.last4}`}
+          onClick={onPay}
           layoutId={morph ? `n-card-${card.id}` : undefined}
           initial={morph ? false : { y: 420, scale: 0.96 }}
           animate={{ y: 0, scale: 1 }}
+          whileTap={{ scale: 0.985 }}
           transition={cardSpring}
-          className="absolute inset-0"
+          className="absolute inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
           style={{ borderRadius: 16, boxShadow: '0 12px 30px rgba(0,0,0,0.5)' }}
         >
           {/* Tilt sits inside the layoutId element: both write transform, so never on the same node. */}
@@ -341,7 +349,7 @@ function Detail({
           >
             <CardFace card={card} live />
           </Tilt>
-        </motion.div>
+        </motion.button>
       </div>
 
       <DetailBody card={card} session={session} onWhy={onWhy} onPick={onPick} delay={0.12} />

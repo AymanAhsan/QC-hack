@@ -138,8 +138,17 @@ function Shell({ layout }: { layout: Layout }) {
   const nav = useNav()
   const session = useSession()
   const [paying, setPaying] = useState(false)
+  // The card a tap in Wallet asked to pay with; null presents the best card for the store.
+  const [payCardId, setPayCardId] = useState<string | null>(null)
+  const openPay = (cardId: string | null = null) => {
+    setPayCardId(cardId)
+    setPaying(true)
+  }
   // Double-clicking the preview frame's side button brings up Pay from any tab, like Apple Pay.
-  useSideButton(() => setPaying((p) => !p))
+  useSideButton(() => {
+    setPayCardId(null)
+    setPaying((p) => !p)
+  })
   const main = useRef<HTMLElement>(null)
   const [width, setWidth] = useState(390)
   const [dir, setDir] = useState(0)
@@ -166,7 +175,7 @@ function Shell({ layout }: { layout: Layout }) {
   const screen = (
     <AnimatePresence mode="wait" initial={false} custom={dir}>
       <motion.div key={nav.tab} custom={dir} variants={TAB_SLIDE} initial="enter" animate="center" exit="exit">
-        <TabScreen tab={nav.tab} session={session} width={width} onSeeRewards={() => go('missed')} />
+        <TabScreen tab={nav.tab} session={session} width={width} onSeeRewards={() => go('missed')} onPayWith={openPay} />
       </motion.div>
     </AnimatePresence>
   )
@@ -175,7 +184,7 @@ function Shell({ layout }: { layout: Layout }) {
     <MotionConfig reducedMotion="user">
       {layout === 'wide' ? (
         <div className="flex h-full">
-          <SideNav tab={nav.tab} onSelect={go} onPay={() => setPaying(true)} />
+          <SideNav tab={nav.tab} onSelect={go} onPay={() => openPay()} />
           <motion.main ref={main} layoutScroll className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div className="mx-auto w-full max-w-[1080px] px-6 pb-16 pt-8">{screen}</div>
           </motion.main>
@@ -188,19 +197,31 @@ function Shell({ layout }: { layout: Layout }) {
           <ProgressiveBlur position="top" height="calc(var(--sat) + 40px)" color="rgb(0 0 0 / 0.55)" className="z-10" opacity={topBlur} />
           <ProgressiveBlur position="bottom" height="calc(var(--n-bar-bottom) + 96px)" color="rgb(0 0 0 / 0.5)" className="z-[9]" />
           <TabBar tab={nav.tab} onSelect={go} />
-          <PayButton onClick={() => setPaying(true)} />
+          <PayButton onClick={() => openPay()} />
         </div>
       )}
       <SaveFailure session={session} />
-      <PaySheet open={paying} onOpenChange={setPaying} session={session} />
+      <PaySheet open={paying} onOpenChange={setPaying} session={session} cardId={payCardId} />
     </MotionConfig>
   )
 }
 
-function TabScreen({ tab, session, width, onSeeRewards }: { tab: Tab; session: Session; width: number; onSeeRewards: () => void }) {
+function TabScreen({
+  tab,
+  session,
+  width,
+  onSeeRewards,
+  onPayWith,
+}: {
+  tab: Tab
+  session: Session
+  width: number
+  onSeeRewards: () => void
+  onPayWith: (cardId: string) => void
+}) {
   switch (tab) {
     case 'wallet':
-      return <WalletScreen session={session} width={width} />
+      return <WalletScreen session={session} width={width} onPayWith={onPayWith} />
     case 'scan':
       return <ScanScreen session={session} onSeeRewards={onSeeRewards} />
     case 'deals':
