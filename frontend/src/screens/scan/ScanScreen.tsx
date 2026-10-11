@@ -37,7 +37,9 @@ interface Result {
 // Deals always sends a subtotal; this only covers an openScan() without one.
 const DEFAULT_SUBTOTAL_CENTS = 10000
 // The steps stay up at least this long, so a quick answer doesn't flash past.
+// A screenshot gets longer: each step should visibly happen while the cart is read.
 const MIN_SCAN_MS = 900
+const MIN_UPLOAD_MS = 4500
 
 export function ScanScreen({ session, onSeeRewards }: { session: Session; onSeeRewards: () => void }) {
   const { scanIntent, clearScanIntent } = useNav()
@@ -56,7 +58,7 @@ export function ScanScreen({ session, onSeeRewards }: { session: Session; onSeeR
     setFailure(null)
     setResult(null)
     setLogged(null)
-    const shown = new Promise((r) => setTimeout(r, MIN_SCAN_MS))
+    const shown = new Promise((r) => setTimeout(r, request.kind === 'upload' ? MIN_UPLOAD_MS : MIN_SCAN_MS))
     try {
       let next: Result
       if (request.kind === 'stack') {
@@ -226,13 +228,15 @@ function ManualEntry({ onSubmit }: { onSubmit: (body: StackRequest) => void }) {
 }
 
 const STEP_AT = [0, 650, 1250]
+const UPLOAD_STEP_AT = [0, 2000, 3400]
 
 function Scanning({ request, image, cardCount, onCancel }: { request: ScanRequest; image: string | null; cardCount: number; onCancel: () => void }) {
   const [at, setAt] = useState(0)
   useEffect(() => {
-    const timers = STEP_AT.slice(1).map((ms, i) => setTimeout(() => setAt(i + 1), ms))
+    const stepAt = request.kind === 'upload' ? UPLOAD_STEP_AT : STEP_AT
+    const timers = stepAt.slice(1).map((ms, i) => setTimeout(() => setAt(i + 1), ms))
     return () => timers.forEach(clearTimeout)
-  }, [])
+  }, [request.kind])
   const steps = [
     request.kind === 'upload' ? 'Reading your cart' : request.kind === 'sample' ? 'Loading the sample cart' : `Looking up ${request.body.merchant_name ?? 'the store'}`,
     'Checking coupons',
