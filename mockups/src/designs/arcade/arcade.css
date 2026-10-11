@@ -1,0 +1,42 @@
+/* Arcade's push mechanic (Josh Comeau's 3D button). The button is transparent
+   with --d of bottom padding; .push-edge is a solid layer starting --d down, and
+   .push-face rests at the top. Press drops the face onto the edge in 34ms and
+   release springs it back. The layout box is exactly what you see, so margins
+   at call sites mean what they say. Only transform animates. Scoped to .arcade. */
+
+.arcade .push {
+  padding-bottom: var(--d);
+}
+
+.arcade .push-edge {
+  position: absolute;
+  inset: var(--d) 0 0 0;
+}
+
+.arcade .push-face {
+  position: relative;
+  transition: transform 600ms cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .arcade .push:hover:not(:disabled) .push-face {
+    transform: translateY(-2px);
+    transition-duration: 250ms;
+  }
+}
+
+.arcade .push:active:not(:disabled) .push-face,
+.arcade .push[data-pressed] .push-face {
+  transform: translateY(calc(var(--d) - 1px));
+  transition-duration: 34ms;
+}
+
+.arcade .push:disabled .push-face {
+  transform: translateY(calc(var(--d) - 1px));
+  color: #a79c8e !important; /* beats the tone's inline text colour */
+}
+
+.arcade ::selection {
+  background: #1fcb82;
+  color: #1f1f1f;
+}

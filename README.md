@@ -52,6 +52,10 @@ On a computer, the quickest check is Chrome DevTools → ⋮ → More tools → 
 
 If the phone cannot connect, allow Node.js through the Windows firewall on private networks (Windows prompts the first time `npm run dev` runs), or check that the Wi-Fi isn't a guest/isolated network. The backend can stay on `127.0.0.1`; the phone only talks to Vite.
 
+### UI demo
+
+`mockups/` is a standalone, clickable demo of the redesigned UI (no backend needed). Run `cd mockups && npm install && npm run dev`, then open the `Network:` URL (port 5190) on your phone. See [mockups/README.md](mockups/README.md).
+
 ## Checks
 
 ```bash

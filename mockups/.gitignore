@@ -1,0 +1,4 @@
+node_modules
+dist
+# Walk-through screenshots: regenerate with npm run shots
+artifacts
