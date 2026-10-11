@@ -1,6 +1,6 @@
 {
-  "name": "CardMax: Credit Card Optimizer (demo)",
-  "short_name": "CardMax",
+  "name": "CreditMaxx: Credit Card Optimizer (demo)",
+  "short_name": "CreditMaxx",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

@@ -79,7 +79,7 @@ export function SideNav({ tab, onSelect, onPay }: { tab: Tab; onSelect: (tab: Ta
     <nav aria-label="Main" className="flex w-[248px] shrink-0 flex-col border-r-[0.5px] border-white/10 px-3 pb-5 pt-6">
       <div className="flex items-center gap-2.5 px-3 pb-7">
         <img src="/icon.svg" alt="" width={30} height={30} className="rounded-[8px] outline-1 -outline-offset-1 outline-white/10" />
-        <span className="font-[family-name:var(--font-sf-rounded)] text-[20px] font-bold">CardMax</span>
+        <span className="font-[family-name:var(--font-sf-rounded)] text-[20px] font-bold">CreditMaxx</span>
       </div>
       <ul className="space-y-1">
         {TABS.map(({ id }) => {
