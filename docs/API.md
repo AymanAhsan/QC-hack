@@ -73,7 +73,7 @@ The frontend client (`frontend/src/api.ts`) throws `ApiError` with `status`, `co
 { "status": "ok", "db_mode": "sqlite", "gemini_configured": false, "version": "0.1.0" }
 ```
 
-`db_mode`: `timescale` | `postgres` | `sqlite` | `sqlite-fallback` (Tiger Data unreachable at startup and `ALLOW_SQLITE_FALLBACK=true`) | `not_initialized`. Shown in the dev badge. See [AYMAN.md](AYMAN.md) for how the database is chosen.
+`db_mode`: `timescale` | `postgres` | `sqlite` | `sqlite-fallback` (Tiger Data unreachable at startup and `ALLOW_SQLITE_FALLBACK=true`) | `not_initialized`. See [AYMAN.md](AYMAN.md) for how the database is chosen.
 
 ## GET /api/wallet
 
