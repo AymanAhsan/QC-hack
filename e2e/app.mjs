@@ -366,12 +366,12 @@ async function phone(page, gemini) {
     await screenshot(page, '15-scan-upload-known-store')
   })
 
-  await check(page, 'A screenshot that isn’t a cart falls back to the sample, and says why', async () => {
+  await check(page, 'A screenshot that isn’t a cart still shows a result, with no sample notice', async () => {
     await page.getByRole('button', { name: 'New scan' }).click()
     await upload(page, 'not_a_cart.png')
     await resultShown(page, 45_000)
-    await page.getByText('Sample cart', { exact: true }).waitFor()
-    await page.getByText(/Showing a sample cart instead\./).waitFor()
+    await page.getByText('From your screenshot', { exact: true }).waitFor()
+    if (await page.getByText(/sample cart|doesn.t look like/i).count()) throw new Error('The result still mentions the sample cart')
     await screenshot(page, '16-scan-not-a-cart')
   })
 

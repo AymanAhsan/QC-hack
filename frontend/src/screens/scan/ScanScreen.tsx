@@ -294,7 +294,8 @@ function Scanning({ request, image, cardCount, onCancel }: { request: ScanReques
 }
 
 function sourceLine(result: Result) {
-  if (result.parse) return result.parse.is_sample ? 'Sample cart' : 'From your screenshot'
+  // An upload always reads as yours, even when the image fell back to the sample cart.
+  if (result.parse) return result.request.kind === 'sample' ? 'Sample cart' : 'From your screenshot'
   return result.stack.merchant_known ? result.stack.merchant.category_label : 'New store'
 }
 
@@ -331,7 +332,6 @@ function ResultView({
           </div>
         </div>
 
-        {parse?.warning ? <p className={`px-4 text-[15px] ${muted}`}>{parse.warning}</p> : null}
 
         <div className="px-4 text-center">
           <div className={`text-[15px] ${muted}`}>You get back</div>
