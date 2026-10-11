@@ -155,6 +155,12 @@ export function Row({
 const LOGOS = new Set([
   'airbnb', 'capital-one-travel', 'chase-travel', 'chipotle', 'costco', 'cvs', 'delta', 'doordash', 'hm', 'lululemon',
   'marriott', 'nike', 'shell', 'starbucks', 'sweetgreen', 'target', 'trader-joes', 'ubereats', 'uniqlo', 'whole-foods',
+  'adidas', 'aldi', 'amazon', 'american-airlines', 'apple', 'barnes-and-noble', 'best-buy', 'bjs', 'bp', 'burger-king',
+  'chevron', 'chick-fil-a', 'dollar-general', 'dominos', 'dunkin', 'expedia', 'exxon', 'foot-locker', 'gap', 'grubhub',
+  'hilton', 'home-depot', 'hyatt', 'ikea', 'jetblue', 'kroger', 'levis', 'lowes', 'macys', 'mcdonalds', 'nordstrom',
+  'old-navy', 'panera', 'publix', 'safeway', 'sams-club', 'sephora', 'shake-shack', 'southwest', 'stop-and-shop',
+  'subway', 'taco-bell', 'tj-maxx', 'uber', 'ulta', 'united', 'urban-outfitters', 'walgreens', 'walmart', 'wegmans',
+  'wendys', 'zara',
 ])
 
 export function MerchantMark({ id, name, size = 36 }: { id: string; name: string; size?: number }) {

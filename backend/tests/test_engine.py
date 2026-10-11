@@ -190,7 +190,7 @@ def test_card_benefits_lists_rates_wins_and_rejections():
         ("base", "Everything else", Decimal("1.80")),
     ]
     grocery = next(r for r in amex["benefits"] if r["key"] == "grocery")
-    assert grocery["applies_to"] == ["Trader Joe's", "Whole Foods"]
+    assert grocery["applies_to"] == ["Trader Joe's", "Whole Foods", "Kroger", "Safeway", "Publix", "Wegmans", "Aldi", "Stop & Shop"]
     wins = {m.id for m, _ in amex["best_at"]}
     assert {"trader-joes", "delta"} <= wins and "costco" not in wins and "target" not in wins
     assert [m.id for m in amex["not_accepted_at"]] == ["costco"]

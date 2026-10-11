@@ -40,3 +40,6 @@ Third-party designs, components, and assets used in the app (`frontend/`).
 - **Merchant logos** — `public/logos/*.webp` are each company's own App Store icon (from the
   iTunes Search API), shrunk to 120px; Trader Joe's has no official app, so its website icon.
   The logos are trademarks of their owners and are used only to identify the merchants.
+- **Store locations** — the NYC addresses and coordinates of the in-store merchants in
+  `backend/data.py` come from OpenStreetMap (© OpenStreetMap contributors, ODbL), looked up
+  with Nominatim.
